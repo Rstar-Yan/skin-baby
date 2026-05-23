@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "body-map": "/components/body-map/body-map",
+    "itch-slider": "/components/itch-slider/itch-slider"
+  },
+  "navigationBarTitleText": "记录症状"
+}

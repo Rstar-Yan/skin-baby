@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>AD 儿童养护管家 · MVP 原型</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --blue: oklch(0.58 0.14 251);
+    --blue-soft: oklch(0.92 0.03 251);
+    --green: oklch(0.62 0.13 162);
+    --green-soft: oklch(0.93 0.04 162);
+    --amber: oklch(0.65 0.13 72);
+    --amber-soft: oklch(0.94 0.05 78);
+    --red: oklch(0.52 0.18 29);
+    --red-soft: oklch(0.92 0.04 27);
+    --text: oklch(0.22 0.01 251);
+    --text-secondary: oklch(0.48 0.02 251);
+    --text-muted: oklch(0.68 0.02 251);
+    --surface: oklch(0.985 0.005 251);
+    --card: oklch(1 0 0);
+    --border: oklch(0.91 0.012 251);
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --radius-xs: 8px;
+    --radius-full: 9999px;
+    --shadow-sm: 0 1px 3px oklch(0.2 0.01 251 / 0.06);
+    --shadow-md: 0 4px 16px oklch(0.2 0.01 251 / 0.08);
+    --shadow-hover: 0 8px 28px oklch(0.2 0.01 251 / 0.12);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', 'PingFang SC', 'Noto Serif SC', -apple-system, sans-serif;
+    background: oklch(0.88 0.01 251);
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 24px;
+  }
+  .phone {
+    width: 390px; height: 844px;
+    background: var(--surface);
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 0 0 3px oklch(0.18 0.01 251),
+                0 0 0 6px oklch(0.28 0.01 251),
+                0 0 0 7px oklch(0.22 0.01 251),
+                0 20px 50px oklch(0.15 0.01 251 / 0.35);
+    position: relative;
+  }
+  .notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px;
+    background: oklch(0.18 0.01 251);
+    border-radius: 0 0 20px 20px;
+    z-index: 100;
+  }
+  .status-bar {
+    height: 52px; padding: 16px 28px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    position: relative; z-index: 50;
+  }
+  .status-bar .time { flex:1; font-family: 'DM Sans'; }
+  .status-bar .icons { display:flex; gap:5px; align-items:center; }
+  .status-bar .icons span { font-size: 12px; }
+
+  .nav {
+    height: 48px; display: flex; align-items: center;
+    padding: 0 20px; position: relative;
+    background: var(--surface);
+  }
+  .nav-title { font-size: 18px; font-weight: 700; color: var(--text); font-family: 'Noto Serif SC'; letter-spacing: 0.02em; }
+  .nav-action { position: absolute; right: 20px; font-size: 14px; color: var(--blue); font-weight: 500; cursor: pointer; }
+
+  .scroll-area {
+    height: calc(844px - 52px - 48px - 74px);
+    overflow-y: auto; overflow-x: hidden;
+    padding: 0 18px 8px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-area::-webkit-scrollbar { width: 0; }
+
+  /* Tab Bar */
+  .tab-bar {
+    height: 74px; padding-bottom: 12px;
+    background: oklch(1 0 0 / 0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    display: flex; align-items: center;
+    border-top: 1px solid var(--border);
+  }
+  .tab-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; cursor: pointer;
+    color: var(--text-muted); font-size: 10px; font-weight: 500;
+    transition: color 0.25s var(--ease-out);
+    position: relative;
+  }
+  .tab-item.active { color: var(--blue); }
+  .tab-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
+  .tab-icon svg { width: 22px; height: 22px; }
+  .tab-dot {
+    position: absolute; top: -2px; width: 4px; height: 4px;
+    background: var(--blue); border-radius: 50%;
+    opacity: 0; transform: scale(0);
+    transition: all 0.3s var(--ease-spring);
+  }
+  .tab-item.active .tab-dot { opacity: 1; transform: scale(1); }
+
+  /* Page visibility */
+  .page { display: none; animation: fadeSlide 0.35s var(--ease-out); }
+  .page.active { display: block; }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%,-50%) scale(0.9);
+    background: oklch(0.18 0.01 251 / 0.88);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    color: #fff; padding: 12px 24px;
+    border-radius: var(--radius-full); font-size: 14px; font-weight: 500;
+    z-index: 999; pointer-events: none;
+    opacity: 0; transition: all 0.3s var(--ease-spring);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+
+  /* ──────────────────── HOME PAGE ──────────────────── */
+  .welcome-row {
+    display: flex; align-items: center; gap: 10px;
+    margin: 6px 0 16px;
+  }
+  .avatar-circle {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue-soft), oklch(0.88 0.06 300));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .welcome-text { flex:1; }
+  .welcome-text .greeting { font-size: 13px; color: var(--text-secondary); }
+  .welcome-text .name { font-size: 17px; font-weight: 700; color: var(--text); }
+
+  .status-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 12px;
+  }
+  .status-card {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 16px; box-shadow: var(--shadow-sm);
+    transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+    cursor: pointer; position: relative; overflow: hidden;
+  }
+  .status-card:active { transform: scale(0.97); box-shadow: var(--shadow-md); }
+  .status-card .sc-icon { font-size: 26px; margin-bottom: 8px; }
+  .status-card .sc-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .status-card .sc-value { font-size: 26px; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .status-card .sc-value small { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .status-card .sc-stripe {
+    position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+  }
+  .sc-stripe.green { background: var(--green); }
+  .sc-stripe.amber { background: var(--amber); }
+  .sc-stripe.red { background: var(--red); }
+
+  .status-card .sc-badge {
+    position: absolute; top: 12px; right: 12px;
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .sc-badge.done { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+  .sc-badge.todo { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+
+  .env-card {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 14px 16px; box-shadow: var(--shadow-sm);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .env-icon { font-size: 36px; flex-shrink: 0; }
+  .env-info { flex:1; }
+  .env-info .env-temp { font-size: 22px; font-weight: 700; color: var(--text); }
+  .env-info .env-humi { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .env-tip {
+    font-size: 12px; color: var(--red);
+    background: var(--red-soft);
+    padding: 5px 12px; border-radius: var(--radius-full); font-weight: 500;
+  }
+
+  .quick-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .quick-btn {
+    flex:1; height: 48px; border-radius: var(--radius-sm);
+    border: none; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s var(--ease-out);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .quick-btn.primary { background: var(--blue); color: #fff; }
+  .quick-btn.primary:active { background: oklch(0.52 0.14 251); transform: scale(0.96); }
+  .quick-btn.secondary { background: var(--card); color: var(--blue); border: 1.5px solid var(--blue); }
+  .quick-btn.secondary:active { background: var(--blue-soft); transform: scale(0.96); }
+
+  .section-label {
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 16px 0 10px 2px;
+  }
+  .photo-history {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  }
+  .photo-thumb {
+    width: 72px; height: 72px; border-radius: var(--radius-sm);
+    background: var(--blue-soft); flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-secondary); gap: 4px;
+    cursor: pointer; transition: transform 0.2s var(--ease-out);
+  }
+  .photo-thumb:active { transform: scale(0.93); }
+  .photo-thumb .date-sm { font-size: 9px; color: var(--text-muted); }
+
+  /* ──────────────────── RECORD PAGE ──────────────────── */
+  .photo-zone {
+    width: 100%; height: 180px;
+    background: oklch(0.96 0.01 251);
+    border: 2px dashed oklch(0.85 0.02 251);
+    border-radius: var(--radius-md);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; cursor: pointer;
+    transition: all 0.25s var(--ease-out);
+    margin-bottom: 16px;
+  }
+  .photo-zone:active { border-color: var(--blue); background: var(--blue-soft); transform: scale(0.985); }
+  .photo-zone .cam-icon { font-size: 44px; margin-bottom: 8px; opacity: 0.7; }
+  .photo-zone .cam-hint { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+  .photo-zone .cam-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .body-map-container {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 16px;
+  }
+  .body-map-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+  .body-svg-wrap { width: 100%; height: 200px; position: relative; }
+  .body-svg-wrap svg { width: 100%; height: 100%; }
+
+  .body-dot {
+    cursor: pointer; transition: all 0.25s var(--ease-spring);
+    stroke: #fff; stroke-width: 2;
+  }
+  .body-dot:hover { r: 11; }
+  .body-dot.selected { fill: var(--red); r: 10; stroke-width: 3; stroke: #fff; }
+  .body-dot.hint { animation: dotPulse 2s var(--ease-out) infinite; }
+  @keyframes dotPulse {
+    0%,100% { r: 7; opacity: 0.7; }
+    50% { r: 9; opacity: 1; }
+  }
+  .body-label {
+    font-size: 9px; fill: var(--text-secondary);
+    pointer-events: none; font-weight: 500;
+  }
+  .selected-areas {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; min-height: 28px;
+  }
+  .area-tag {
+    padding: 4px 12px; border-radius: var(--radius-full);
+    font-size: 11px; font-weight: 500; cursor: pointer;
+    background: var(--red-soft); color: var(--red);
+    transition: all 0.2s var(--ease-out);
+  }
+  .area-tag:active { transform: scale(0.93); opacity: 0.7; }
+
+  .slider-wrap {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 20px 16px; box-shadow: var(--shadow-sm); margin-bottom: 12px;
+  }
+  .slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .slider-header .title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .slider-header .score { font-size: 38px; font-weight: 700; color: var(--text); line-height: 1; }
+  .slider-body { position: relative; height: 40px; }
+  .slider-rail {
+    position: absolute; top: 14px; left: 0; right: 0; height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right, var(--green), var(--amber), var(--red));
+  }
+  .slider-thumb {
+    position: absolute; top: 2px; width: 34px; height: 34px;
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 2px 10px oklch(0.2 0.01 251 / 0.2);
+    cursor: grab; transform: translateX(-50%);
+    transition: left 0.1s var(--ease-out);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text);
+    z-index: 2;
+  }
+  .slider-ticks {
+    display: flex; justify-content: space-between;
+    padding: 0 2px; margin-top: 2px;
+  }
+  .slider-ticks span { font-size: 9px; color: var(--text-muted); width: 16px; text-align: center; }
+  .slider-desc {
+    text-align: center; font-size: 14px; color: var(--text-secondary);
+    font-weight: 500; margin-top: 8px;
+  }
+  .slider-desc.none { color: var(--green); }
+  .slider-desc.mild { color: var(--amber); }
+  .slider-desc.severe { color: var(--red); }
+
+  .save-btn {
+    width: 100%; height: 50px; border-radius: var(--radius-sm);
+    background: var(--blue); color: #fff; border: none;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+    margin-bottom: 16px;
+  }
+  .save-btn:active { background: oklch(0.52 0.14 251); transform: scale(0.97); }
+
+  /* ──────────────────── TRIGGER SECTION ──────────────────── */
+  .trigger-section {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 12px;
+  }
+  .trigger-title {
+    font-size: 13px; font-weight: 600; color: var(--red);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 4px;
+  }
+  .trigger-cat { margin-bottom: 12px; }
+  .trigger-cat:last-child { margin-bottom: 0; }
+  .trigger-cat-label {
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
+  }
+  .trigger-tags {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .trigger-tag {
+    padding: 5px 12px; border-radius: var(--radius-full);
+    font-size: 11px; font-weight: 500; cursor: pointer;
+    background: oklch(0.94 0.02 251); color: var(--text-secondary);
+    border: 1.5px solid transparent;
+    transition: all 0.2s var(--ease-out);
+    user-select: none;
+  }
+  .trigger-tag:active { transform: scale(0.94); }
+  .trigger-tag.selected {
+    background: var(--red-soft); color: var(--red);
+    border-color: var(--red);
+  }
+  .trigger-custom {
+    margin-top: 10px; width: 100%;
+    padding: 8px 12px; border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+    font-size: 12px; font-family: inherit;
+    color: var(--text); background: var(--surface);
+    outline: none; transition: border-color 0.2s var(--ease-out);
+  }
+  .trigger-custom:focus { border-color: var(--blue); }
+  .trigger-custom::placeholder { color: var(--text-muted); }
+
+  /* ──────────────────── TRIGGER INSIGHT (HOME) ──────────────────── */
+  .trigger-insight {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 14px 16px; box-shadow: var(--shadow-sm);
+    margin-bottom: 12px; cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .trigger-insight:active { transform: scale(0.985); box-shadow: var(--shadow-hover); }
+  .trigger-insight-icon {
+    width: 40px; height: 40px; border-radius: var(--radius-xs);
+    background: var(--amber-soft); display: flex; align-items: center;
+    justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .trigger-insight-info { flex: 1; }
+  .trigger-insight-info .ti-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .trigger-insight-info .ti-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .trigger-insight-badge {
+    font-size: 11px; font-weight: 600; color: var(--amber);
+    background: var(--amber-soft); padding: 4px 10px;
+    border-radius: var(--radius-full);
+  }
+
+  /* ──────────────────── TRENDS PAGE ──────────────────── */
+  .trend-tabs {
+    display: flex; gap: 4px; background: oklch(0.94 0.01 251);
+    border-radius: var(--radius-full); padding: 4px;
+    margin-bottom: 16px;
+  }
+  .trend-tab {
+    flex:1; padding: 8px 0; border-radius: var(--radius-full);
+    border: none; background: transparent; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); cursor: pointer;
+    transition: all 0.25s var(--ease-out);
+  }
+  .trend-tab.active { background: var(--card); color: var(--text); box-shadow: var(--shadow-sm); }
+  .trend-tab:active { transform: scale(0.96); }
+
+  .chart-card {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 12px;
+  }
+  .chart-card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .chart-svg { width: 100%; height: 180px; }
+  .chart-summary {
+    display: flex; gap: 12px; margin-top: 12px;
+  }
+  .chart-stat {
+    flex:1; text-align: center; padding: 10px;
+    background: var(--surface); border-radius: var(--radius-sm);
+  }
+  .chart-stat .stat-val { font-size: 22px; font-weight: 700; color: var(--text); }
+  .chart-stat .stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  .med-calendar {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 16px; box-shadow: var(--shadow-sm);
+  }
+  .med-cal-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+  .weekday-row { display: flex; margin-bottom: 4px; }
+  .weekday-row span { flex:1; text-align: center; font-size: 10px; color: var(--text-muted); font-weight: 500; }
+  .cal-row { display: flex; gap: 2px; margin-bottom: 2px; }
+  .cal-day {
+    flex:1; aspect-ratio: 1; border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer;
+    transition: all 0.15s var(--ease-out); position: relative;
+  }
+  .cal-day.empty { cursor: default; }
+  .cal-day.today { background: var(--blue-soft); color: var(--blue); }
+  .cal-day.med-day { background: var(--red-soft); color: var(--red); }
+  .cal-day.med-day::after {
+    content: ''; position: absolute; bottom: 2px;
+    width: 4px; height: 4px; background: var(--red); border-radius: 50%;
+  }
+  .cal-day:active:not(.empty) { transform: scale(0.9); }
+
+  .cal-legend {
+    display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--text-secondary);
+  }
+  .cal-legend span { display: flex; align-items: center; gap: 4px; }
+  .cal-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .cal-dot.red { background: var(--red); }
+  .cal-dot.blue { background: var(--blue); }
+
+  /* ──────────────────── KNOWLEDGE PAGE ──────────────────── */
+  .k-section { margin-bottom: 20px; }
+  .k-section-title {
+    font-size: 14px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .k-section-title .k-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .k-dot.beginner { background: var(--blue); }
+  .k-dot.daily { background: var(--green); }
+  .k-dot.acute { background: var(--red); }
+
+  .k-card {
+    background: var(--card); border-radius: var(--radius-sm);
+    padding: 14px 16px; box-shadow: var(--shadow-sm);
+    margin-bottom: 8px; cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    transition: all 0.2s var(--ease-out);
+  }
+  .k-card:active { transform: scale(0.985); box-shadow: var(--shadow-hover); }
+  .k-card-icon {
+    width: 40px; height: 40px; border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .k-card-icon.b { background: var(--blue-soft); }
+  .k-card-icon.d { background: var(--green-soft); }
+  .k-card-icon.a { background: var(--red-soft); }
+  .k-card-info { flex:1; }
+  .k-card-info .k-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .k-card-info .k-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .k-card-arrow { color: var(--text-muted); font-size: 16px; font-weight: 300; }
+
+  /* ──────────────────── PROFILE PAGE ──────────────────── */
+  .profile-header {
+    background: var(--card); border-radius: var(--radius-md);
+    padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .profile-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue-soft), oklch(0.88 0.06 300));
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+    flex-shrink: 0;
+  }
+  .profile-info { flex:1; }
+  .profile-info .child-name { font-size: 18px; font-weight: 700; color: var(--text); }
+  .profile-info .child-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .profile-arrow { color: var(--text-muted); font-size: 16px; }
+
+  .settings-group {
+    background: var(--card); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 16px;
+  }
+  .settings-group-title {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 16px 16px 8px;
+  }
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; cursor: pointer;
+    transition: background 0.15s var(--ease-out);
+    border-bottom: 1px solid oklch(0.96 0.005 251);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row:active { background: oklch(0.97 0.005 251); }
+  .setting-info { flex:1; }
+  .setting-info .s-name { font-size: 15px; font-weight: 500; color: var(--text); }
+  .setting-info .s-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .setting-value { font-size: 13px; color: var(--text-secondary); margin-right: 8px; }
+  .setting-arrow { color: var(--text-muted); }
+
+  .toggle-switch {
+    width: 48px; height: 28px; border-radius: 14px;
+    background: oklch(0.88 0.01 251); cursor: pointer;
+    position: relative; transition: background 0.3s var(--ease-out);
+    flex-shrink: 0;
+  }
+  .toggle-switch.on { background: var(--green); }
+  .toggle-knob {
+    width: 24px; height: 24px; background: #fff; border-radius: 50%;
+    position: absolute; top: 2px; left: 2px;
+    transition: left 0.3s var(--ease-spring);
+    box-shadow: 0 1px 4px oklch(0.2 0.01 251 / 0.2);
+  }
+  .toggle-switch.on .toggle-knob { left: 22px; }
+
+  /* Responsive: center on wider screens */
+  @media (max-width: 420px) {
+    body { padding: 0; }
+    .phone { width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+    .notch { display: none; }
+    .scroll-area { height: calc(100vh - 52px - 48px - 74px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="icons">
+      <span>⚫⚫⚫⚫</span>
+      <span>WiFi</span>
+      <span style="font-size:15px">▮</span>
+    </div>
+  </div>
+  <div class="nav">
+    <span class="nav-title" id="navTitle">今日护理</span>
+    <span class="nav-action" id="navAction"></span>
+  </div>
+
+  <!-- ═══════════ PAGE 1: HOME ═══════════ -->
+  <div class="scroll-area page active" id="page-home">
+    <div class="welcome-row">
+      <div class="avatar-circle">👶</div>
+      <div class="welcome-text">
+        <div class="greeting">下午好，小贝壳妈妈</div>
+        <div class="name">今天护理做好了吗？</div>
+      </div>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card" onclick="showToast('润肤打卡成功 ✓')">
+        <div class="sc-stripe green"></div>
+        <div class="sc-icon">🧴</div>
+        <div class="sc-label">今日润肤</div>
+        <div class="sc-value">1<span style="font-size:14px">/2</span> <small>次</small></div>
+        <div class="sc-badge todo"></div>
+      </div>
+      <div class="status-card" onclick="switchPage(1)">
+        <div class="sc-stripe amber"></div>
+        <div class="sc-icon">🩺</div>
+        <div class="sc-label">瘙痒评分</div>
+        <div class="sc-value">6 <small>分</small></div>
+        <div class="sc-badge todo" style="background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);"></div>
+      </div>
+      <div class="status-card" onclick="switchPage(1)">
+        <div class="sc-stripe" style="background:var(--blue);"></div>
+        <div class="sc-icon">💊</div>
+        <div class="sc-label">今日用药</div>
+        <div class="sc-value" style="font-size:15px;color:var(--green);">已完成</div>
+        <div class="sc-badge done"></div>
+      </div>
+      <div class="status-card" onclick="switchPage(1)">
+        <div class="sc-stripe" style="background:var(--blue);"></div>
+        <div class="sc-icon">📸</div>
+        <div class="sc-label">今日拍照</div>
+        <div class="sc-value" style="font-size:15px;color:var(--text-muted);">未记录</div>
+      </div>
+    </div>
+
+    <div class="env-card">
+      <div class="env-icon">🌤️</div>
+      <div class="env-info">
+        <div class="env-temp">上海 26°</div>
+        <div class="env-humi">湿度 38% · 较干燥</div>
+      </div>
+      <div class="env-tip">⚠️ 加强润肤</div>
+    </div>
+
+    <div class="trigger-insight" onclick="switchPage(1)">
+      <div class="trigger-insight-icon">🔍</div>
+      <div class="trigger-insight-info">
+        <div class="ti-title">本月可疑诱因</div>
+        <div class="ti-desc">化纤衣物被标记3次，均伴随瘙痒加重</div>
+      </div>
+      <div class="trigger-insight-badge">⚠️ 高关联</div>
+    </div>
+
+    <div class="quick-row">
+      <button class="quick-btn primary" onclick="switchPage(1)">📸 拍照记录</button>
+      <button class="quick-btn secondary" onclick="showToast('润肤打卡成功 ✓')">🧴 润肤打卡</button>
+    </div>
+
+    <div class="section-label">最近记录</div>
+    <div class="photo-history">
+      <div class="photo-thumb" onclick="switchPage(2)">
+        <span>📸</span><span style="font-size:11px">手臂</span><span class="date-sm">5.23</span>
+      </div>
+      <div class="photo-thumb" onclick="switchPage(2)">
+        <span>📸</span><span style="font-size:11px">膝盖窝</span><span class="date-sm">5.22</span>
+      </div>
+      <div class="photo-thumb" onclick="switchPage(2)">
+        <span>📸</span><span style="font-size:11px">面部</span><span class="date-sm">5.21</span>
+      </div>
+      <div class="photo-thumb" onclick="switchPage(2)">
+        <span>📸</span><span style="font-size:11px">手肘</span><span class="date-sm">5.20</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE 2: RECORD ═══════════ -->
+  <div class="scroll-area page" id="page-record">
+    <div class="photo-zone" onclick="showToast('📷 模拟拍照完成')">
+      <div class="cam-icon">📷</div>
+      <div class="cam-hint">点击拍摄皮损部位</div>
+      <div class="cam-sub">对准宝宝患处，光线充足时拍摄效果最佳</div>
+    </div>
+
+    <div class="body-map-container">
+      <div class="body-map-title">选择受累部位（可多选）</div>
+      <div class="body-svg-wrap">
+        <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+          <!-- Body outline -->
+          <ellipse cx="100" cy="28" rx="28" ry="22" fill="oklch(0.95 0.01 251)" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="100" y1="50" x2="100" y2="100" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <rect x="72" y="60" width="56" height="80" rx="16" fill="oklch(0.96 0.01 251)" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="72" y1="78" x2="44" y2="108" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="128" y1="78" x2="156" y2="108" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="44" y1="108" x2="36" y2="150" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="156" y1="108" x2="164" y2="150" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="100" y1="140" x2="80" y2="194" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+          <line x1="100" y1="140" x2="120" y2="194" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+
+          <!-- Dots -->
+          <circle class="body-dot hint" cx="100" cy="18" r="7" fill="oklch(0.75 0.02 251)" data-area="头顶" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="85" cy="28" r="7" fill="oklch(0.75 0.02 251)" data-area="面部" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="115" cy="28" r="7" fill="oklch(0.75 0.02 251)" data-area="面部" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="100" cy="55" r="7" fill="oklch(0.75 0.02 251)" data-area="颈部" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="100" cy="90" r="7" fill="oklch(0.75 0.02 251)" data-area="躯干" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="44" cy="118" r="7" fill="oklch(0.75 0.02 251)" data-area="手肘" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="156" cy="118" r="7" fill="oklch(0.75 0.02 251)" data-area="手肘" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="36" cy="155" r="7" fill="oklch(0.75 0.02 251)" data-area="手腕" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="164" cy="155" r="7" fill="oklch(0.75 0.02 251)" data-area="手腕" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="88" cy="195" r="7" fill="oklch(0.75 0.02 251)" data-area="膝盖" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="112" cy="195" r="7" fill="oklch(0.75 0.02 251)" data-area="膝盖" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="80" cy="240" r="7" fill="oklch(0.75 0.02 251)" data-area="脚踝" onclick="toggleBodyDot(this)"/>
+          <circle class="body-dot" cx="120" cy="240" r="7" fill="oklch(0.75 0.02 251)" data-area="脚踝" onclick="toggleBodyDot(this)"/>
+
+          <!-- Labels for key dots -->
+          <text class="body-label" x="45" y="14">头顶</text>
+          <text class="body-label" x="38" y="34">面部</text>
+          <text class="body-label" x="38" y="60">颈部</text>
+          <text class="body-label" x="28" y="124">手肘</text>
+          <text class="body-label" x="12" y="158">手腕</text>
+          <text class="body-label" x="28" y="200">膝盖</text>
+          <text class="body-label" x="28" y="244">脚踝</text>
+        </svg>
+      </div>
+      <div class="selected-areas" id="selectedAreas"></div>
+    </div>
+
+    <div class="slider-wrap">
+      <div class="slider-header">
+        <span class="title">瘙痒评分（NRS）</span>
+        <span class="score" id="itchScoreDisplay">6</span>
+      </div>
+      <div class="slider-body" id="sliderTrack">
+        <div class="slider-rail"></div>
+        <div class="slider-thumb" id="sliderThumb" style="left:60%;">6</div>
+      </div>
+      <div class="slider-ticks">
+        <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+        <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+      </div>
+      <div class="slider-desc mild" id="itchDesc">中度瘙痒，建议冷敷缓解</div>
+    </div>
+
+    <button class="save-btn" onclick="showTriggerToast()">保存记录</button>
+
+    <div class="trigger-section">
+      <div class="trigger-title">⚠️ 疑似诱因（多选，帮助发现发作规律）</div>
+
+      <div class="trigger-cat">
+        <div class="trigger-cat-label">🍎 饮食</div>
+        <div class="trigger-tags">
+          <span class="trigger-tag" onclick="toggleTrigger(this)">牛奶</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">鸡蛋</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">海鲜</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">坚果</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">芒果</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">小麦</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">新辅食</span>
+        </div>
+      </div>
+
+      <div class="trigger-cat">
+        <div class="trigger-cat-label">👕 衣物</div>
+        <div class="trigger-tags">
+          <span class="trigger-tag" onclick="toggleTrigger(this)">羊毛</span>
+          <span class="trigger-tag selected" onclick="toggleTrigger(this)">化纤</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">新衣未洗</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">不透气面料</span>
+        </div>
+      </div>
+
+      <div class="trigger-cat">
+        <div class="trigger-cat-label">🌿 环境</div>
+        <div class="trigger-tags">
+          <span class="trigger-tag" onclick="toggleTrigger(this)">花粉</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">雾霾</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">宠物毛屑</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">尘螨</span>
+        </div>
+      </div>
+
+      <div class="trigger-cat">
+        <div class="trigger-cat-label">🧴 洗护</div>
+        <div class="trigger-tags">
+          <span class="trigger-tag" onclick="toggleTrigger(this)">新沐浴露</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">新洗衣液</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">新润肤霜</span>
+        </div>
+      </div>
+
+      <div class="trigger-cat">
+        <div class="trigger-cat-label">📋 其他</div>
+        <div class="trigger-tags">
+          <span class="trigger-tag" onclick="toggleTrigger(this)">情绪激动</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">出汗</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">疫苗</span>
+          <span class="trigger-tag" onclick="toggleTrigger(this)">感冒发烧</span>
+        </div>
+      </div>
+
+      <input type="text" class="trigger-custom" placeholder="补充其他诱因（选填）">
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE 3: TRENDS ═══════════ -->
+  <div class="scroll-area page" id="page-trends">
+    <div class="trend-tabs">
+      <button class="trend-tab active" onclick="switchTrendTab('week', this)">本周</button>
+      <button class="trend-tab" onclick="switchTrendTab('month', this)">本月</button>
+    </div>
+
+    <div class="chart-card" id="chartWeek">
+      <div class="chart-card-title">瘙痒评分趋势 · 本周</div>
+      <svg class="chart-svg" viewBox="0 0 320 180">
+        <line x1="40" y1="150" x2="300" y2="150" stroke="oklch(0.9 0.005 251)" stroke-width="1"/>
+        <line x1="40" y1="120" x2="300" y2="120" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <line x1="40" y1="90" x2="300" y2="90" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <line x1="40" y1="60" x2="300" y2="60" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <line x1="40" y1="30" x2="300" y2="30" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <text x="32" y="154" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">0</text>
+        <text x="32" y="124" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">3</text>
+        <text x="32" y="94" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">5</text>
+        <text x="32" y="64" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">8</text>
+        <text x="32" y="34" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">10</text>
+
+        <!-- Area fill -->
+        <path d="M76,138 L114,100 L152,76 L190,90 L228,66 L266,86 L300,70 L300,150 L76,150 Z"
+              fill="oklch(0.58 0.14 251 / 0.12)"/>
+        <!-- Line -->
+        <polyline points="76,138 114,100 152,76 190,90 228,66 266,86 300,70"
+                  fill="none" stroke="oklch(0.58 0.14 251)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Dots -->
+        <circle cx="76" cy="138" r="4.5" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2.5"/>
+        <circle cx="114" cy="100" r="4.5" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2.5"/>
+        <circle cx="152" cy="76" r="4.5" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2.5"/>
+        <circle cx="190" cy="90" r="4.5" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2.5"/>
+        <circle cx="228" cy="66" r="4.5" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2.5"/>
+        <circle cx="266" cy="86" r="4.5" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2.5"/>
+        <circle cx="300" cy="70" r="4.5" fill="#fff" stroke="oklch(0.52 0.18 29)" stroke-width="2.5"/>
+
+        <text x="76" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">六</text>
+        <text x="114" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">日</text>
+        <text x="152" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">一</text>
+        <text x="190" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">二</text>
+        <text x="228" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">三</text>
+        <text x="266" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">四</text>
+        <text x="300" y="168" font-size="9" fill="oklch(0.55 0.01 251)" text-anchor="middle">五</text>
+      </svg>
+      <div class="chart-summary">
+        <div class="chart-stat">
+          <div class="stat-val" style="color:var(--red);">7.8</div>
+          <div class="stat-label">最高评分</div>
+        </div>
+        <div class="chart-stat">
+          <div class="stat-val">4.3</div>
+          <div class="stat-label">平均评分</div>
+        </div>
+        <div class="chart-stat">
+          <div class="stat-val" style="color:var(--green);">2</div>
+          <div class="stat-label">最低评分</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card" id="chartMonth" style="display:none;">
+      <div class="chart-card-title">瘙痒评分趋势 · 本月</div>
+      <svg class="chart-svg" viewBox="0 0 320 180">
+        <line x1="40" y1="150" x2="300" y2="150" stroke="oklch(0.9 0.005 251)" stroke-width="1"/>
+        <line x1="40" y1="110" x2="300" y2="110" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <line x1="40" y1="70" x2="300" y2="70" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <line x1="40" y1="30" x2="300" y2="30" stroke="oklch(0.9 0.005 251)" stroke-width="1" stroke-dasharray="4"/>
+        <text x="32" y="154" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">0</text>
+        <text x="32" y="114" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">5</text>
+        <text x="32" y="74" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">8</text>
+        <text x="32" y="34" font-size="9" fill="oklch(0.65 0.01 251)" text-anchor="end">10</text>
+
+        <path d="M48,135 L80,110 L112,95 L144,120 L176,85 L208,60 L240,90 L272,72 L300,55 L300,150 L48,150 Z"
+              fill="oklch(0.58 0.14 251 / 0.1)"/>
+        <polyline points="48,135 80,110 112,95 144,120 176,85 208,60 240,90 272,72 300,55"
+                  fill="none" stroke="oklch(0.58 0.14 251)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Highlight best day -->
+        <circle cx="208" cy="60" r="6" fill="none" stroke="oklch(0.62 0.13 162)" stroke-width="2" stroke-dasharray="3"/>
+        <text x="208" y="50" font-size="9" fill="oklch(0.62 0.13 162)" text-anchor="middle">最好</text>
+        <circle cx="48" cy="135" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="80" cy="110" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="112" cy="95" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="144" cy="120" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="176" cy="85" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="208" cy="60" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="240" cy="90" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="272" cy="72" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+        <circle cx="300" cy="55" r="3" fill="#fff" stroke="oklch(0.58 0.14 251)" stroke-width="2"/>
+      </svg>
+      <div class="chart-summary">
+        <div class="chart-stat">
+          <div class="stat-val" style="color:var(--red);">8</div>
+          <div class="stat-label">最高评分</div>
+        </div>
+        <div class="chart-stat">
+          <div class="stat-val">4.1</div>
+          <div class="stat-label">平均评分</div>
+        </div>
+        <div class="chart-stat">
+          <div class="stat-val" style="color:var(--green);">1</div>
+          <div class="stat-label">最低评分</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="med-calendar">
+      <div class="med-cal-title">用药日历 · 2026年5月</div>
+      <div class="weekday-row"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+      <div class="cal-row" id="calGrid"></div>
+      <div class="cal-legend">
+        <span><span class="cal-dot red"></span> 激素用药日</span>
+        <span><span class="cal-dot blue"></span> 今天</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE 4: KNOWLEDGE ═══════════ -->
+  <div class="scroll-area page" id="page-knowledge">
+    <div class="k-section">
+      <div class="k-section-title">
+        <span class="k-dot beginner"></span> 新手入门
+      </div>
+      <div class="k-card" onclick="showToast('打开：什么是特应性皮炎？')">
+        <div class="k-card-icon b">📖</div>
+        <div class="k-card-info">
+          <div class="k-title">什么是特应性皮炎？</div>
+          <div class="k-desc">了解AD的病因、症状与诊断标准</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：皮肤屏障与润肤的重要性')">
+        <div class="k-card-icon b">🧴</div>
+        <div class="k-card-info">
+          <div class="k-title">皮肤屏障与润肤的重要性</div>
+          <div class="k-desc">为什么每天涂润肤剂是治疗的基础</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：正确认识激素药膏')">
+        <div class="k-card-icon b">💊</div>
+        <div class="k-card-info">
+          <div class="k-title">正确认识激素药膏</div>
+          <div class="k-desc">外用激素的安全用法与常见误区</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="k-section">
+      <div class="k-section-title">
+        <span class="k-dot daily"></span> 日常养护
+      </div>
+      <div class="k-card" onclick="showToast('打开：四季护理要点')">
+        <div class="k-card-icon d">🌸</div>
+        <div class="k-card-info">
+          <div class="k-title">四季护理要点</div>
+          <div class="k-desc">春夏秋冬不同季节的护理策略</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：洗浴与衣物选择')">
+        <div class="k-card-icon d">🛁</div>
+        <div class="k-card-info">
+          <div class="k-title">洗澡、穿衣有讲究</div>
+          <div class="k-desc">水温、频率、衣物材质与款式建议</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：辅食添加注意事项')">
+        <div class="k-card-icon d">🍎</div>
+        <div class="k-card-info">
+          <div class="k-title">辅食添加注意事项</div>
+          <div class="k-desc">如何科学添加辅食并观察过敏反应</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="k-section">
+      <div class="k-section-title">
+        <span class="k-dot" style="background:var(--amber);"></span> 常见诱因排查
+      </div>
+      <div class="k-card" onclick="showToast('打开：衣物材质与AD的关系')">
+        <div class="k-card-icon" style="background:var(--amber-soft);">👕</div>
+        <div class="k-card-info">
+          <div class="k-title">衣物材质与AD的关系</div>
+          <div class="k-desc">羊毛、化纤、新衣服不洗——哪些是隐形杀手？</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：食物过敏排查表')">
+        <div class="k-card-icon" style="background:var(--amber-soft);">🥛</div>
+        <div class="k-card-info">
+          <div class="k-title">食物过敏排查表</div>
+          <div class="k-desc">八大常见过敏原逐一排除法</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：环境因素自查清单')">
+        <div class="k-card-icon" style="background:var(--amber-soft);">🌿</div>
+        <div class="k-card-info">
+          <div class="k-title">环境因素自查清单</div>
+          <div class="k-desc">花粉、尘螨、宠物、新装修——一表自测</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：洗护产品成分避坑指南')">
+        <div class="k-card-icon" style="background:var(--amber-soft);">🧴</div>
+        <div class="k-card-info">
+          <div class="k-title">洗护产品成分避坑指南</div>
+          <div class="k-desc">哪些成分可能刺激AD皮肤？怎么选才安全</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="k-section">
+      <div class="k-section-title">
+        <span class="k-dot acute"></span> 急性期处理
+      </div>
+      <div class="k-card" onclick="showToast('打开：何时需要就医？')">
+        <div class="k-card-icon a">🏥</div>
+        <div class="k-card-info">
+          <div class="k-title">出现这些情况请立即就医</div>
+          <div class="k-desc">识别需要紧急处理的危险信号</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：湿包疗法详解')">
+        <div class="k-card-icon a">💧</div>
+        <div class="k-card-info">
+          <div class="k-title">湿包疗法怎么做？</div>
+          <div class="k-desc">急性加重期的有效家庭护理方法</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+      <div class="k-card" onclick="showToast('打开：止痒小技巧')">
+        <div class="k-card-icon a">🧊</div>
+        <div class="k-card-info">
+          <div class="k-title">6个安全止痒小技巧</div>
+          <div class="k-desc">冷敷、拍打替代抓挠，减少皮肤损伤</div>
+        </div>
+        <span class="k-card-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE 5: PROFILE ═══════════ -->
+  <div class="scroll-area page" id="page-profile">
+    <div class="profile-header">
+      <div class="profile-avatar">👶</div>
+      <div class="profile-info">
+        <div class="child-name">小贝壳</div>
+        <div class="child-detail">男 · 2岁3个月 · 2024年1月确诊AD</div>
+      </div>
+      <span class="profile-arrow">›</span>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">提醒设置</div>
+      <div class="setting-row" onclick="toggleReminder('morning', this)">
+        <div class="setting-info">
+          <div class="s-name">早晨润肤提醒</div>
+          <div class="s-desc">每天提醒给宝宝涂抹润肤剂</div>
+        </div>
+        <span class="setting-value">08:00</span>
+        <div class="toggle-switch on" id="toggle-morning"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="setting-row" onclick="toggleReminder('evening', this)">
+        <div class="setting-info">
+          <div class="s-name">晚间润肤提醒</div>
+          <div class="s-desc">睡前再次涂抹，锁住整晚水分</div>
+        </div>
+        <span class="setting-value">20:00</span>
+        <div class="toggle-switch on" id="toggle-evening"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="setting-row" onclick="toggleReminder('med', this)">
+        <div class="setting-info">
+          <div class="s-name">用药提醒</div>
+          <div class="s-desc">每日2次，早晚各一次</div>
+        </div>
+        <span class="setting-value">08:30/20:30</span>
+        <div class="toggle-switch on" id="toggle-med"><div class="toggle-knob"></div></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">工具</div>
+      <div class="setting-row" onclick="showToast('功能开发中')">
+        <div class="setting-info">
+          <div class="s-name">用药管理</div>
+          <div class="s-desc">管理药品、查看用药日历</div>
+        </div>
+        <span class="setting-arrow">›</span>
+      </div>
+      <div class="setting-row" onclick="showToast('功能开发中')">
+        <div class="setting-info">
+          <div class="s-name">就医报告生成</div>
+          <div class="s-desc">一键生成复诊报告，方便与医生沟通</div>
+        </div>
+        <span class="setting-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">其他</div>
+      <div class="setting-row" onclick="showToast('功能开发中')">
+        <div class="setting-info">
+          <div class="s-name">关于我们</div>
+        </div>
+        <span class="setting-arrow">›</span>
+      </div>
+      <div class="setting-row" onclick="showToast('功能开发中')">
+        <div class="setting-info">
+          <div class="s-name">意见反馈</div>
+        </div>
+        <span class="setting-arrow">›</span>
+      </div>
+    </div>
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- ═══════════ TAB BAR ═══════════ -->
+  <div class="tab-bar">
+    <div class="tab-item active" data-page="0" onclick="switchPage(0)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <span>首页</span>
+    </div>
+    <div class="tab-item" data-page="1" onclick="switchPage(1)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </div>
+      <span>记录</span>
+    </div>
+    <div class="tab-item" data-page="2" onclick="switchPage(2)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <span>趋势</span>
+      <div class="tab-dot"></div>
+    </div>
+    <div class="tab-item" data-page="3" onclick="switchPage(3)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <span>知识</span>
+    </div>
+    <div class="tab-item" data-page="4" onclick="switchPage(4)">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <span>我的</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── Page Navigation ───
+  const pages = ['page-home', 'page-record', 'page-trends', 'page-knowledge', 'page-profile'];
+  const navTitles = ['今日护理', '记录症状', '瘙痒趋势', '养护知识', '我的'];
+  const navActions = ['', '', '导出报告', '', ''];
+
+  function switchPage(idx) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pages[idx]).classList.add('active');
+    document.querySelectorAll('.tab-item').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.getElementById('navTitle').textContent = navTitles[idx];
+    document.getElementById('navAction').textContent = navActions[idx];
+  }
+
+  // ─── Trend Tabs ───
+  function switchTrendTab(type, btn) {
+    document.querySelectorAll('.trend-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('chartWeek').style.display = type === 'week' ? 'block' : 'none';
+    document.getElementById('chartMonth').style.display = type === 'month' ? 'block' : 'none';
+  }
+
+  // ─── Body Map Dots ───
+  function toggleBodyDot(dot) {
+    dot.classList.toggle('selected');
+    updateSelectedAreas();
+  }
+
+  function updateSelectedAreas() {
+    const selected = document.querySelectorAll('.body-dot.selected');
+    const container = document.getElementById('selectedAreas');
+    const seen = new Set();
+    container.innerHTML = '';
+    selected.forEach(dot => {
+      const area = dot.getAttribute('data-area');
+      if (!seen.has(area)) {
+        seen.add(area);
+        const tag = document.createElement('span');
+        tag.className = 'area-tag';
+        tag.textContent = area;
+        tag.onclick = () => {
+          document.querySelectorAll(`.body-dot[data-area="${area}"]`).forEach(d => d.classList.remove('selected'));
+          updateSelectedAreas();
+        };
+        container.appendChild(tag);
+      }
+    });
+  }
+
+  // ─── Itch Slider ───
+  const sliderTrack = document.getElementById('sliderTrack');
+  const sliderThumb = document.getElementById('sliderThumb');
+  const itchScoreDisplay = document.getElementById('itchScoreDisplay');
+  const itchDesc = document.getElementById('itchDesc');
+  let dragging = false;
+
+  function updateSlider(clientX) {
+    const rect = sliderTrack.getBoundingClientRect();
+    let pct = (clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    const score = Math.round(pct * 10);
+    sliderThumb.style.left = (score / 10 * 100) + '%';
+    sliderThumb.textContent = score;
+    itchScoreDisplay.textContent = score;
+    if (score <= 2) { itchDesc.textContent = '基本不痒，继续保持'; itchDesc.className = 'slider-desc none'; }
+    else if (score <= 5) { itchDesc.textContent = '轻度瘙痒，日常润肤即可'; itchDesc.className = 'slider-desc mild'; }
+    else if (score <= 7) { itchDesc.textContent = '中度瘙痒，建议冷敷缓解'; itchDesc.className = 'slider-desc mild'; }
+    else { itchDesc.textContent = '重度瘙痒，请考虑就医'; itchDesc.className = 'slider-desc severe'; }
+  }
+
+  sliderThumb.addEventListener('pointerdown', (e) => { dragging = true; sliderThumb.setPointerCapture(e.pointerId); });
+  sliderThumb.addEventListener('pointermove', (e) => { if (dragging) updateSlider(e.clientX); });
+  sliderThumb.addEventListener('pointerup', () => { dragging = false; });
+  sliderTrack.addEventListener('click', (e) => { if (e.target !== sliderThumb) updateSlider(e.clientX); });
+
+  // ─── Trigger Tags ───
+  function toggleTrigger(tag) {
+    tag.classList.toggle('selected');
+    const cat = tag.closest('.trigger-cat');
+    const selected = cat.querySelectorAll('.trigger-tag.selected');
+    const count = document.querySelectorAll('.trigger-tag.selected').length;
+    // Update the toast to reflect selected triggers
+  }
+
+  function showTriggerToast() {
+    const selected = document.querySelectorAll('.trigger-tag.selected');
+    const count = selected.length;
+    let triggers = [];
+    selected.forEach(t => triggers.push(t.textContent));
+    if (count > 0) {
+      showToast('✅ 已保存症状 + ' + count + '个诱因');
+    } else {
+      showToast('✅ 记录已保存（未标记诱因）');
+    }
+  }
+
+  // ─── Reminder Toggles ───
+  function toggleReminder(type, row) {
+    const toggle = document.getElementById('toggle-' + type);
+    const isOn = toggle.classList.contains('on');
+    if (isOn) { toggle.classList.remove('on'); } else { toggle.classList.add('on'); }
+    const status = isOn ? '已关闭' : '已开启';
+    showToast(type === 'morning' ? `早晨提醒${status}` : type === 'evening' ? `晚间提醒${status}` : `用药提醒${status}`);
+  }
+
+  // ─── Toast ───
+  let toastTimer;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg; toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1400);
+  }
+
+  // ─── Calendar Generator ───
+  function generateCalendar() {
+    const grid = document.getElementById('calGrid');
+    const today = 23; // May 23 = Friday (index 5)
+    const startDay = 5; // May 1 2026 = Friday
+    const daysInMonth = 31;
+    // Simulated medication days
+    const medDays = new Set([2,3,4,5,8,9,10,15,16,17,22,23]);
+
+    let html = '<div class="cal-row">';
+    for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      let cls = 'cal-day';
+      if (d === today) cls += ' today';
+      if (medDays.has(d)) cls += ' med-day';
+      html += `<div class="${cls}">${d}</div>`;
+      if ((startDay + d) % 7 === 0 && d < daysInMonth) html += '</div><div class="cal-row">';
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+  generateCalendar();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+page {
+  --blue: #4A90D9;
+  --blue-soft: #E8F0FB;
+  --green: #52B788;
+  --green-soft: #E8F5EE;
+  --amber: #D4A843;
+  --amber-soft: #FBF3E0;
+  --red: #D9534F;
+  --red-soft: #FDEAEA;
+  --text: #2D3436;
+  --text-secondary: #636E72;
+  --text-muted: #9AA0A6;
+  --surface: #F8F9FA;
+  --card: #FFFFFF;
+  --border: #E8ECF0;
+
+  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.container {
+  min-height: 100vh;
+  padding-bottom: 24rpx;
+}
+
+/* 通用卡片 */
+.card {
+  background: var(--card);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin: 0 24rpx 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+
+/* 语义色class */
+.color-blue { color: var(--blue); }
+.color-green { color: var(--green); }
+.color-amber { color: var(--amber); }
+.color-red { color: var(--red); }
+.bg-blue-soft { background: var(--blue-soft); }
+.bg-green-soft { background: var(--green-soft); }
+.bg-amber-soft { background: var(--amber-soft); }
+.bg-red-soft { background: var(--red-soft); }

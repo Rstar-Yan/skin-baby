@@ -1,0 +1,94 @@
+name: 肤小宝 · 微信小程序自动上传
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'miniprogram/**'
+      - 'cloudfunctions/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '上传版本号'
+        required: false
+        type: string
+      desc:
+        description: '版本描述'
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # ============================================================
+  # 预览：生成真机扫码预览二维码
+  # ============================================================
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install miniprogram-ci
+        run: npm install -g miniprogram-ci
+
+      - name: Generate Preview QR Code
+        env:
+          WX_APPID: ${{ secrets.WX_APPID }}
+          WX_PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
+        run: |
+          echo "$WX_PRIVATE_KEY" > /tmp/wx_private.key
+          miniprogram-ci preview \
+            --pp ./miniprogram \
+            --pkp /tmp/wx_private.key \
+            --appid "$WX_APPID" \
+            --qr-format image \
+            --qr-output /tmp/preview-qr.png
+
+      - name: Upload QR Code
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-qrcode
+          path: /tmp/preview-qr.png
+          retention-days: 3
+
+  # ============================================================
+  # 上传：提交到微信后台（体验版）
+  # ============================================================
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install miniprogram-ci
+        run: npm install -g miniprogram-ci
+
+      - name: Upload to WeChat
+        env:
+          WX_APPID: ${{ secrets.WX_APPID }}
+          WX_PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
+        run: |
+          echo "$WX_PRIVATE_KEY" > /tmp/wx_private.key
+          miniprogram-ci upload \
+            --pp ./miniprogram \
+            --pkp /tmp/wx_private.key \
+            --appid "$WX_APPID" \
+            --uv "${{ github.event.inputs.version || github.run_number }}" \
+            --ud "${{ github.event.inputs.desc || 'Auto upload from GitHub Actions' }}" \
+            --enable-es6 true \
+            --enable-es7 true \
+            --enable-autoprefixwxss true \
+            --enable-minify true
+        shell: bash
