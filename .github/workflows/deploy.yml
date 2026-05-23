@@ -1,16 +1,14 @@
-name: 肤小宝 · 微信小程序自动上传
+name: 肤小宝 CI/CD
 
 on:
   push:
     branches: [main]
     paths:
-      - 'miniprogram/**'
       - 'uniapp/**'
-      - 'cloudfunctions/**'
   workflow_dispatch:
     inputs:
       version:
-        description: '上传版本号'
+        description: '版本号'
         required: false
         type: string
       desc:
@@ -18,63 +16,24 @@ on:
         required: false
         type: string
 
-env:
-  NODE_VERSION: '18'
-
 jobs:
-  # ============================================================
-  # 预览：生成真机扫码预览二维码
-  # ============================================================
-  preview:
+  build-and-upload:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
 
-      - name: Install miniprogram-ci
-        run: npm install -g miniprogram-ci
+      - name: Install uni-app deps
+        working-directory: uniapp
+        run: npm install
 
-      - name: Generate Preview QR Code
-        env:
-          WX_APPID: ${{ secrets.WX_APPID }}
-          WX_PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
-        run: |
-          echo "$WX_PRIVATE_KEY" > /tmp/wx_private.key
-          miniprogram-ci preview \
-            --pp ./miniprogram \
-            --pkp /tmp/wx_private.key \
-            --appid "$WX_APPID" \
-            --qr-format image \
-            --qr-output /tmp/preview-qr.png
-
-      - name: Upload QR Code
-        uses: actions/upload-artifact@v4
-        with:
-          name: preview-qrcode
-          path: /tmp/preview-qr.png
-          retention-days: 3
-
-  # ============================================================
-  # 上传：提交到微信后台（体验版）
-  # ============================================================
-  upload:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install miniprogram-ci
-        run: npm install -g miniprogram-ci
+      - name: Build mp-weixin
+        working-directory: uniapp
+        run: npm run build:mp-weixin
 
       - name: Set version
         id: ver
@@ -93,13 +52,9 @@ jobs:
           WX_PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
         run: |
           echo "$WX_PRIVATE_KEY" > /tmp/wx_private.key
-          miniprogram-ci upload \
-            --pp ./miniprogram \
+          npx miniprogram-ci upload \
+            --pp ./uniapp/dist/build/mp-weixin \
             --pkp /tmp/wx_private.key \
             --appid "$WX_APPID" \
             --uv "${{ steps.ver.outputs.version }}" \
-            --ud "${{ steps.ver.outputs.desc }}" \
-            --enable-es6 true \
-            --enable-es7 true \
-            --enable-autoprefixwxss true \
-            --enable-minify true
+            --ud "${{ steps.ver.outputs.desc }}"
