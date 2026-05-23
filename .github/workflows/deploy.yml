@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'miniprogram/**'
+      - 'uniapp/**'
       - 'cloudfunctions/**'
   workflow_dispatch:
     inputs:
