@@ -1,0 +1,51 @@
+name: 肤小宝 CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号'
+        required: true
+        default: '1.0.0'
+      desc:
+        description: '版本描述'
+        default: 'CI 自动上传'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        working-directory: uniapp
+        run: npm ci
+
+      - name: Build
+        working-directory: uniapp
+        run: npm run build:mp-weixin
+
+      - name: Upload
+        working-directory: uniapp
+        env:
+          WX_UPLOAD_KEY: ${{ secrets.WX_UPLOAD_KEY }}
+          WX_APPID: ${{ secrets.WX_APPID }}
+        run: |
+          echo "$WX_UPLOAD_KEY" > /tmp/wx-key.pem
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VER="${GITHUB_REF#refs/tags/v}"
+            node deploy/upload.js --version "$VER" --desc "正式发布 v${VER}"
+          else
+            VER="${{ github.event.inputs.version || 'dev' }}"
+            DESC="${{ github.event.inputs.desc || 'CI自动上传' }}"
+            node deploy/upload.js --version "$VER" --desc "$DESC"
+          fi
