@@ -75,6 +75,17 @@ jobs:
       - name: Install miniprogram-ci
         run: npm install -g miniprogram-ci
 
+      - name: Set version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version || github.run_number }}" >> $GITHUB_OUTPUT
+            echo "desc=${{ github.event.inputs.desc || '手动上传' }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.run_number }}" >> $GITHUB_OUTPUT
+            echo "desc=push #${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload to WeChat
         env:
           WX_APPID: ${{ secrets.WX_APPID }}
@@ -85,10 +96,9 @@ jobs:
             --pp ./miniprogram \
             --pkp /tmp/wx_private.key \
             --appid "$WX_APPID" \
-            --uv "${{ github.event.inputs.version || github.run_number }}" \
-            --ud "${{ github.event.inputs.desc || 'Auto upload from GitHub Actions' }}" \
+            --uv "${{ steps.ver.outputs.version }}" \
+            --ud "${{ steps.ver.outputs.desc }}" \
             --enable-es6 true \
             --enable-es7 true \
             --enable-autoprefixwxss true \
             --enable-minify true
-        shell: bash
