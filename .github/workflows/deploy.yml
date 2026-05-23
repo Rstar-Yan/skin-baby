@@ -29,7 +29,7 @@ jobs:
 
       - name: Install uni-app deps
         working-directory: uniapp
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build mp-weixin
         working-directory: uniapp
