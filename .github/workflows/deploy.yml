@@ -29,11 +29,11 @@ jobs:
 
       - name: Install uni-app deps
         working-directory: uniapp
-        run: npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps --loglevel verbose
 
       - name: Build mp-weixin
         working-directory: uniapp
-        run: npm run build:mp-weixin
+        run: npm run build:mp-weixin 2>&1 | tail -80
 
       - name: Set version
         id: ver
