@@ -29,11 +29,14 @@ jobs:
 
       - name: Install uni-app deps
         working-directory: uniapp
-        run: npm install --legacy-peer-deps --loglevel verbose
+        run: npm install --legacy-peer-deps
 
       - name: Build mp-weixin
         working-directory: uniapp
-        run: npm run build:mp-weixin 2>&1 | tail -80
+        run: |
+          echo "=== Node: $(node --version) npm: $(npm --version) ==="
+          ls node_modules/@dcloudio 2>&1 | head -10
+          npm run build:mp-weixin 2>&1
 
       - name: Set version
         id: ver
