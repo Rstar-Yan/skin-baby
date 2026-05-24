@@ -1,0 +1,21 @@
+{
+  "name": "肤小宝",
+  "appid": "__UNI__SKINBABY",
+  "description": "肤小宝 - 儿童AD日常养护工具",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "touristappid",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true
+    },
+    "usingComponents": true,
+    "optimization": {
+      "subPackages": false
+    }
+  }
+}
