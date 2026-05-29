@@ -48,26 +48,26 @@
       {
         "pagePath": "pages/home/index",
         "text": "首页",
-        "iconPath": "static/tab/home.svg",
-        "selectedIconPath": "static/tab/home-active.svg"
+        "iconPath": "static/tab/home.png",
+        "selectedIconPath": "static/tab/home-active.png"
       },
       {
         "pagePath": "pages/record/index",
         "text": "记录",
-        "iconPath": "static/tab/record.svg",
-        "selectedIconPath": "static/tab/record-active.svg"
+        "iconPath": "static/tab/record.png",
+        "selectedIconPath": "static/tab/record-active.png"
       },
       {
         "pagePath": "pages/trends/index",
         "text": "趋势",
-        "iconPath": "static/tab/trend.svg",
-        "selectedIconPath": "static/tab/trend-active.svg"
+        "iconPath": "static/tab/trend.png",
+        "selectedIconPath": "static/tab/trend-active.png"
       },
       {
         "pagePath": "pages/knowledge/index",
         "text": "知识",
-        "iconPath": "static/tab/knowledge.svg",
-        "selectedIconPath": "static/tab/knowledge-active.svg"
+        "iconPath": "static/tab/knowledge.png",
+        "selectedIconPath": "static/tab/knowledge-active.png"
       }
     ]
   }

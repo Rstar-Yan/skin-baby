@@ -1,0 +1,47 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/record/index",
+    "pages/trends/index",
+    "pages/knowledge/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTitleText": "肤小宝",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F8F9FB"
+  },
+  "tabBar": {
+    "color": "#9AA0A6",
+    "selectedColor": "#4A90D9",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "static/tab/home.svg",
+        "selectedIconPath": "static/tab/home-active.svg"
+      },
+      {
+        "pagePath": "pages/record/index",
+        "text": "记录",
+        "iconPath": "static/tab/record.svg",
+        "selectedIconPath": "static/tab/record-active.svg"
+      },
+      {
+        "pagePath": "pages/trends/index",
+        "text": "趋势",
+        "iconPath": "static/tab/trend.svg",
+        "selectedIconPath": "static/tab/trend-active.svg"
+      },
+      {
+        "pagePath": "pages/knowledge/index",
+        "text": "知识",
+        "iconPath": "static/tab/knowledge.svg",
+        "selectedIconPath": "static/tab/knowledge-active.svg"
+      }
+    ]
+  },
+  "usingComponents": {}
+}

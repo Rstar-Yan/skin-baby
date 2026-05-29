@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "记录症状",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "usingComponents": {
+    "body-map": "../../components/BodyMap",
+    "itch-slider": "../../components/ItchSlider",
+    "trigger-tags": "../../components/TriggerTags"
+  }
+}

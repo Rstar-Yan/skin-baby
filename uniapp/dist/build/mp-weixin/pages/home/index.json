@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "今日护理",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "usingComponents": {
+    "status-card": "../../components/StatusCard"
+  }
+}
