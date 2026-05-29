@@ -1,0 +1,5 @@
+node_modules/
+uniapp/node_modules/
+dist/
+.DS_Store
+*.log
