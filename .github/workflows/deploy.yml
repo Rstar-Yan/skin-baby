@@ -1,72 +1,71 @@
-     1|name: 肤小宝 CI/CD
-     2|
-     3|on:
-     4|  push:
-     5|    branches: [main]
-     6|    paths:
-     7|      - 'uniapp/**'
-     8|  workflow_dispatch:
-     9|    inputs:
-    10|      version:
-    11|        description: '版本号（默认自动）'
-    12|        required: false
-    13|        type: string
-    14|      desc:
-    15|        description: '版本描述'
-    16|        required: false
-    17|        type: string
-    18|
-    19|jobs:
-    20|  build-and-upload:
-    21|    runs-on: ubuntu-latest
-    22|    defaults:
-    23|      run:
-    24|        working-directory: uniapp
-    25|
-    26|    steps:
-    27|      - uses: actions/checkout@v4
-    28|
-    29|      - uses: actions/setup-node@v4
-    30|        with:
-    31|          node-version: '20'
-    32|          cache: 'npm'
-    33|          cache-dependency-path: uniapp/package-lock.json
-    34|
-    35|      - name: 安装依赖
-    36|        run: npm ci --legacy-peer-deps
-    37|
-    38|      - name: 编译微信小程序
-    39|        run: npm run build:mp-weixin
-    40|
-    41|      - name: 设置版本号
-    42|        id: ver
-    43|        run: |
-    44|          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-    45|            echo "version=${{ github.event.inputs.version || '1.0.0' }}" >> "$GITHUB_OUTPUT"
-    46|            echo "desc=${{ github.event.inputs.desc || '手动上传' }}" >> "$GITHUB_OUTPUT"
-    47|          else
-    48|            echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-    49|            echo "desc=push #${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-    50|          fi
-    51|
-    52|      - name: 上传微信体验版
-    53|        env:
-    54|          WX_APPID: ${{ secrets.WX_APPID }}
-    55|          WX_PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
-    56|        run: |
-    57|          # base64 解码 (如果 WX_PRIVATE_KEY 存的是 base64) 或直接写入
-    58|          echo "$WX_PRIVATE_KEY" > /tmp/wx_private.key
-    59|          echo "私钥文件大小: $(wc -c < /tmp/wx_private.key) bytes"
-    60|          echo "私钥前10行:"
-    61|          head -10 /tmp/wx_private.key
-    62|          npx miniprogram-ci upload \
-    63|            --pp ./dist/build/mp-weixin \
-    64|            --pkp /tmp/wx_private.key \
-    65|            --appid "$WX_APPID" \
-    66|            --uv "${{ steps.ver.outputs.version }}" \
-    67|            --ud "${{ steps.ver.outputs.desc }}" \
-    68|            --enable-es6 true \
-    69|            --enable-es7 true \
-    70|            --minify true \
-    71|            --auto-prefix-wxss true
-    72|
+name: 肤小宝 CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'uniapp/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（默认自动）'
+        required: false
+        type: string
+      desc:
+        description: '版本描述'
+        required: false
+        type: string
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: uniapp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: uniapp/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci --legacy-peer-deps
+
+      - name: 编译微信小程序
+        run: npm run build:mp-weixin
+
+      - name: 设置版本号
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version || '1.0.0' }}" >> "$GITHUB_OUTPUT"
+            echo "desc=${{ github.event.inputs.desc || '手动上传' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "desc=push #${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 上传微信体验版
+        env:
+          WX_APPID: ${{ secrets.WX_APPID }}
+          WX_PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
+        run: |
+          echo "$WX_PRIVATE_KEY" > /tmp/wx_private.key
+          echo "私钥文件大小: $(wc -c < /tmp/wx_private.key) bytes"
+          echo "私钥前10行:"
+          head -10 /tmp/wx_private.key
+          npx miniprogram-ci upload \
+            --pp ./dist/build/mp-weixin \
+            --pkp /tmp/wx_private.key \
+            --appid "$WX_APPID" \
+            --uv "${{ steps.ver.outputs.version }}" \
+            --ud "${{ steps.ver.outputs.desc }}" \
+            --enable-es6 true \
+            --enable-es7 true \
+            --minify true \
+            --auto-prefix-wxss true
