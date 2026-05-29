@@ -1,6 +1,11 @@
 {
   "name": "skin-baby-uniapp",
   "version": "1.0.0",
+  "overrides": {
+    "miniprogram-ci": {
+      "less": "3.13.1"
+    }
+  },
   "description": "肤小宝 - 儿童AD日常养护工具 (uni-app Vue3)",
   "type": "module",
   "scripts": {
