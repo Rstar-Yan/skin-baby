@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { callCloudFunction, login } from '@/utils/cloud.js'
 
 export const useRecordStore = defineStore('record', () => {
   // 状态
@@ -8,6 +9,8 @@ export const useRecordStore = defineStore('record', () => {
   const customTrigger = ref('')
   const itchScore = ref(6)
   const records = ref([])
+  const loading = ref(false)
+  const user = ref(null)
 
   // 计算属性
   const selectedTriggerCount = computed(() => selectedTriggers.value.length)
@@ -18,6 +21,18 @@ export const useRecordStore = defineStore('record', () => {
     if (score <= 7) return { text: '中度瘙痒，建议冷敷缓解', class: 'mild' }
     return { text: '重度瘙痒，请考虑就医', class: 'severe' }
   })
+
+  // 微信登录
+  const doLogin = async () => {
+    try {
+      const data = await login()
+      user.value = data
+      return data
+    } catch (err) {
+      console.error('登录失败:', err)
+      return null
+    }
+  }
 
   // 方法
   const toggleArea = (areaName) => {
@@ -43,18 +58,45 @@ export const useRecordStore = defineStore('record', () => {
     return selectedTriggers.value.includes(`${catId}:${tag}`)
   }
 
-  const saveRecord = () => {
+  const saveRecord = async () => {
     const record = {
-      id: Date.now(),
-      date: new Date().toISOString(),
       areas: [...selectedAreas.value],
       triggers: [...selectedTriggers.value],
       customTrigger: customTrigger.value,
       itchScore: itchScore.value,
-      itchDescription: itchDescription.value
+      itchDescription: itchDescription.value.text
     }
-    records.value.unshift(record)
+
+    // 保存到云数据库
+    try {
+      const result = await callCloudFunction('records', {
+        action: 'create',
+        data: record
+      })
+      if (result.code === 0) {
+        record._id = result.data.id
+        record.createdAt = new Date().toISOString()
+        records.value.unshift(record)
+      }
+    } catch (err) {
+      console.error('保存记录失败:', err)
+    }
+
     return record
+  }
+
+  const fetchRecords = async () => {
+    loading.value = true
+    try {
+      const result = await callCloudFunction('records', { action: 'list' })
+      if (result.code === 0) {
+        records.value = result.data.list || []
+      }
+    } catch (err) {
+      console.error('获取记录失败:', err)
+    } finally {
+      loading.value = false
+    }
   }
 
   const clearRecord = () => {
@@ -71,16 +113,20 @@ export const useRecordStore = defineStore('record', () => {
     customTrigger,
     itchScore,
     records,
-    
+    loading,
+    user,
+
     // 计算属性
     selectedTriggerCount,
     itchDescription,
-    
+
     // 方法
     toggleArea,
     toggleTrigger,
     isTriggerSelected,
     saveRecord,
-    clearRecord
+    fetchRecords,
+    clearRecord,
+    doLogin
   }
 })
