@@ -66,14 +66,15 @@ export const useRecordStore = defineStore('record', () => {
   }
 
   /** 保存症状记录 */
-  async function saveRecord() {
+  async function saveRecord(tempFilePaths = []) {
     loading.value = true
     try {
       const data = {
         areas: [...selectedAreas.value],
         triggers: [...selectedTriggers.value],
         customTrigger: customTrigger.value,
-        itchScore: itchScore.value
+        itchScore: itchScore.value,
+        photoUrls: tempFilePaths || []
       }
       const res = await recordsApi.create(data)
       if (res.code === 0) {

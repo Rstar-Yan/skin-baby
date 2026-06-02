@@ -67,7 +67,7 @@ const onSave = async () => {
   if (saving.value) return
   saving.value = true
 
-  const result = await store.saveRecord()
+  const result = await store.saveRecord(tempFilePaths.value)
 
   if (result.success) {
     uni.showToast({ title: '记录已保存', icon: 'success' })
@@ -88,7 +88,10 @@ const onSave = async () => {
 <style lang="scss" scoped>
 .page-record {
   padding: 0 18px;
-  padding-bottom: 24px;
+  padding-bottom: 40px;
+  height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .photo-zone {
