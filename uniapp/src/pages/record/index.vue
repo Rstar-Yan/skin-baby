@@ -2,21 +2,26 @@
   <view class="page-record">
     <!-- Photo Zone -->
     <view class="photo-zone" @click="onTakePhoto">
-      <text class="cam-icon">📷</text>
-      <text class="cam-hint">{{ hasPhoto ? '已拍摄 ✓ 点击重拍' : '点击拍摄皮损部位' }}</text>
-      <text class="cam-sub" v-if="!hasPhoto">对准宝宝患处，光线充足时拍摄效果最佳</text>
+      <image v-if="previewUrl" :src="previewUrl" class="photo-preview" mode="aspectFill"></image>
+      <template v-else>
+        <text class="cam-icon">📷</text>
+        <text class="cam-hint">点击拍摄皮损部位</text>
+        <text class="cam-sub">对准宝宝患处，光线充足时拍摄效果最佳</text>
+      </template>
     </view>
 
     <!-- Body Map -->
-    <BodyMap v-model="selectedAreas" />
+    <BodyMap :modelValue="store.selectedAreas" @update:modelValue="store.selectedAreas = $event" />
 
     <!-- Itch Slider -->
-    <ItchSlider v-model="itchScore" />
+    <ItchSlider :modelValue="store.itchScore" @update:modelValue="store.itchScore = $event" />
 
     <!-- Trigger Tags -->
     <TriggerTags
-      v-model="selectedTriggers"
-      v-model:customValue="customTrigger"
+      :modelValue="store.selectedTriggers"
+      @update:modelValue="store.selectedTriggers = $event"
+      :customValue="store.customTrigger"
+      @update:customValue="store.customTrigger = $event"
     />
 
     <!-- Save Button -->
@@ -27,7 +32,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRecordStore } from '@/stores/record.js'
 import BodyMap from '@/components/BodyMap.vue'
 import ItchSlider from '@/components/ItchSlider.vue'
@@ -35,28 +40,8 @@ import TriggerTags from '@/components/TriggerTags.vue'
 
 const store = useRecordStore()
 const saving = ref(false)
-const hasPhoto = ref(false)
-
-// 从 store 获取当前表单值
-const selectedAreas = computed({
-  get: () => store.selectedAreas,
-  set: (v) => store.selectedAreas = v
-})
-
-const selectedTriggers = computed({
-  get: () => store.selectedTriggers,
-  set: (v) => store.selectedTriggers = v
-})
-
-const customTrigger = computed({
-  get: () => store.customTrigger,
-  set: (v) => store.customTrigger = v
-})
-
-const itchScore = computed({
-  get: () => store.itchScore,
-  set: (v) => store.itchScore = v
-})
+const previewUrl = ref('')
+const tempFilePaths = ref([])
 
 // 拍照
 const onTakePhoto = () => {
@@ -65,9 +50,8 @@ const onTakePhoto = () => {
     sizeType: ['compressed'],
     sourceType: ['camera', 'album'],
     success: (res) => {
-      // 先用云存储上传，后面再实现
-      // 当前版本先标记已拍照
-      hasPhoto.value = true
+      previewUrl.value = res.tempFilePaths[0]
+      tempFilePaths.value = res.tempFilePaths
       uni.showToast({ title: '拍照成功', icon: 'success' })
     },
     fail: (err) => {
@@ -88,7 +72,8 @@ const onSave = async () => {
   if (result.success) {
     uni.showToast({ title: '记录已保存', icon: 'success' })
     store.clearRecord()
-    hasPhoto.value = false
+    previewUrl.value = ''
+    tempFilePaths.value = []
 
     setTimeout(() => {
       uni.switchTab({ url: '/pages/home/index' })
@@ -118,12 +103,20 @@ const onSave = async () => {
   justify-content: center;
   margin-bottom: 16px;
   transition: all 0.25s ease;
+  overflow: hidden;
+  position: relative;
 
   &:active {
     border-color: #4A90D9;
     background: #EBF2FA;
     transform: scale(0.985);
   }
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
 }
 
 .cam-icon {

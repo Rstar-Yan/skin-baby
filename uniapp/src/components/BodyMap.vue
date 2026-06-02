@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { bodyAreas } from '@/utils/mock-data.js'
 
 const props = defineProps({
@@ -68,79 +68,47 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const dots = ref(bodyAreas)
-const selectedIds = ref([])
 
-// Initialize from modelValue if needed
-const initFromModelValue = () => {
-  if (props.modelValue.length > 0) {
-    const ids = []
-    props.modelValue.forEach(name => {
-      dots.value.filter(d => d.name === name).forEach(d => ids.push(d.id))
-    })
-    selectedIds.value = ids
-  }
+// 直接用选中的部位名称来管理
+const selectedNames = ref([...props.modelValue])
+
+// 同步外部变化
+watch(() => props.modelValue, (val) => {
+  selectedNames.value = [...val]
+}, { deep: true })
+
+const isSelected = (id) => {
+  const dot = dots.value.find(d => d.id === id)
+  return dot && selectedNames.value.includes(dot.name)
 }
-initFromModelValue()
 
-const isSelected = (id) => selectedIds.value.includes(id)
-
-const displayAreas = computed(() => {
-  const areas = []
-  const seen = new Set()
-  selectedIds.value.forEach(sid => {
-    const dot = dots.value.find(d => d.id === sid)
-    if (dot && !seen.has(dot.name)) {
-      seen.add(dot.name)
-      areas.push(dot.name)
-    }
-  })
-  return areas
-})
+const displayAreas = computed(() => selectedNames.value)
 
 const onSvgClick = (e) => {
   const circle = e.target.closest('circle')
   if (!circle) return
   const id = circle.getAttribute('data-id')
   if (!id) return
-  
-  const idx = selectedIds.value.indexOf(id)
+
+  const dot = dots.value.find(d => d.id === id)
+  if (!dot) return
+
+  const idx = selectedNames.value.indexOf(dot.name)
   if (idx >= 0) {
-    selectedIds.value.splice(idx, 1)
+    selectedNames.value.splice(idx, 1)
   } else {
-    selectedIds.value.push(id)
+    selectedNames.value.push(dot.name)
   }
-  
-  // Build unique area names
-  const areas = []
-  const seen = new Set()
-  selectedIds.value.forEach(sid => {
-    const dot = dots.value.find(d => d.id === sid)
-    if (dot && !seen.has(dot.name)) {
-      seen.add(dot.name)
-      areas.push(dot.name)
-    }
-  })
-  
-  emit('update:modelValue', areas)
+
+  emit('update:modelValue', [...selectedNames.value])
 }
 
 const removeArea = (areaName) => {
-  // Remove all dots with this name
-  dots.value.filter(d => d.name === areaName).forEach(d => {
-    const idx = selectedIds.value.indexOf(d.id)
-    if (idx >= 0) selectedIds.value.splice(idx, 1)
-  })
-  
-  const areas = []
-  const seen = new Set()
-  selectedIds.value.forEach(sid => {
-    const dot = dots.value.find(d => d.id === sid)
-    if (dot && !seen.has(dot.name)) {
-      seen.add(dot.name)
-      areas.push(dot.name)
-    }
-  })
-  emit('update:modelValue', areas)
+  const idx = selectedNames.value.indexOf(areaName)
+  if (idx >= 0) {
+    selectedNames.value.splice(idx, 1)
+  }
+  emit('update:modelValue', [...selectedNames.value])
 }
 </script>
 

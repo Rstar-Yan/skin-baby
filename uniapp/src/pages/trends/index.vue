@@ -47,7 +47,7 @@
 
     <!-- Records List -->
     <view v-if="activeTab === 'records'">
-      <view v-for="rec in records" :key="rec._id" class="record-item">
+      <view v-for="rec in records" :key="rec._id" class="record-item" @click="goDetail(rec._id)">
         <view class="record-header">
           <text class="record-date">{{ formatDate(rec.createdAt) }}</text>
           <text class="record-score" :class="scoreClass(rec.itchScore)">{{ rec.itchScore }} 分</text>
@@ -58,6 +58,7 @@
         <view class="record-triggers" v-if="rec.triggers && rec.triggers.length > 0">
           <text class="trigger-tag-sm" v-for="t in rec.triggers" :key="t">{{ t.split(':')[1] || t }}</text>
         </view>
+        <text class="record-arrow">›</text>
       </view>
 
       <view v-if="records.length === 0 && !loadingTrend" class="empty-state">
@@ -234,6 +235,10 @@ const scoreClass = (score) => {
   if (score <= 6) return 'score-mid'
   return 'score-high'
 }
+
+const goDetail = (id) => {
+  uni.navigateTo({ url: '/pages/record-detail/index?id=' + id })
+}
 </script>
 
 <style lang="scss" scoped>
@@ -334,6 +339,14 @@ const scoreClass = (score) => {
   padding: 12px 14px;
   margin-bottom: 8px;
   box-shadow: 0 1px 3px rgba(56,62,72,0.06);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  position: relative;
+
+  &:active {
+    transform: scale(0.98);
+  }
 }
 
 .record-header {
@@ -394,5 +407,15 @@ const scoreClass = (score) => {
   padding: 60px 0;
   font-size: 14px;
   color: #9AA0A6;
+}
+
+.record-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px;
+  color: #D5DAE0;
+  font-weight: 300;
 }
 </style>
