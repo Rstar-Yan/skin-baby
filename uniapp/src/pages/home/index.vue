@@ -4,7 +4,7 @@
     <view class="welcome-row">
       <view class="avatar-circle">👶</view>
       <view class="welcome-text">
-        <text class="greeting">下午好{{ userStore.user?.childName ? '，' + userStore.childDisplayName + '妈妈' : '' }}</text>
+        <text class="greeting">{{ userStore.initialized ? (userStore.user?.childName ? '下午好，' + userStore.childDisplayName + '妈妈' : '下午好，宝宝家长') : '加载中...' }}</text>
         <text class="name">今天护理做好了吗？</text>
       </view>
     </view>
