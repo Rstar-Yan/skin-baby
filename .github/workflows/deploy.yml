@@ -60,6 +60,7 @@ jobs:
           echo "私钥前10行:"
           head -10 /tmp/wx_private.key
           npx miniprogram-ci upload \
+            --robot 2 \
             --pp ./dist/build/mp-weixin \
             --pkp /tmp/wx_private.key \
             --appid "$WX_APPID" \
