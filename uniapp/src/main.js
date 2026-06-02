@@ -5,7 +5,7 @@ import App from './App.vue'
 // 云开发初始化（仅在微信小程序环境）
 // #ifdef MP-WEIXIN
 wx.cloud.init({
-  env: 'skin-baby-xxxxx', // 稍后创建云环境后替换
+  env: 'cloudbase-d3gkqze7q3faa631e', // 云环境ID
   traceUser: true
 })
 // #endif

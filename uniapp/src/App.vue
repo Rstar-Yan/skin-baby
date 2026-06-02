@@ -1,12 +1,12 @@
 <script setup>
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
-import { useRecordStore } from '@/stores/record.js'
+import { useUserStore } from '@/stores/user.js'
 
 onLaunch(() => {
   console.log('肤小宝 App Launch')
-  // 自动登录
-  const store = useRecordStore()
-  store.doLogin()
+  // 静默登录：获取 openid + 同步用户记录
+  const userStore = useUserStore()
+  userStore.doLogin()
 })
 
 onShow(() => {

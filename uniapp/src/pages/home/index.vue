@@ -4,7 +4,7 @@
     <view class="welcome-row">
       <view class="avatar-circle">👶</view>
       <view class="welcome-text">
-        <text class="greeting">下午好，{{ userInfo.name }}妈妈</text>
+        <text class="greeting">下午好，{{ userStore.childDisplayName }}{{ userStore.user?.childName ? '妈妈' : '家长' }}</text>
         <text class="name">今天护理做好了吗？</text>
       </view>
     </view>
@@ -100,19 +100,15 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { userInfo as mockUserInfo, todayStatus as mockTodayStatus, recentRecords as mockRecentRecords, triggerInsight as mockTriggerInsight } from '@/utils/mock-data.js'
+import { useUserStore } from '@/stores/user.js'
+import { todayStatus as mockTodayStatus, recentRecords as mockRecentRecords, triggerInsight as mockTriggerInsight } from '@/utils/mock-data.js'
 import StatusCard from '@/components/StatusCard.vue'
 
-const userInfo = ref(mockTodayStatus ? { name: '小贝壳' } : { name: '小贝壳' })
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.user ? { name: userStore.childDisplayName } : { name: '小贝壳' })
 const todayStatus = reactive({ ...mockTodayStatus })
 const recentRecords = ref([...mockRecentRecords])
 const triggerInsightData = ref({ ...mockTriggerInsight })
-
-// Fix user info
-const initUser = () => {
-  userInfo.value = mockUserInfo
-}
-initUser()
 
 const moisturizingStatus = computed(() => {
   if (todayStatus.moisturizing.done) return 'done'
