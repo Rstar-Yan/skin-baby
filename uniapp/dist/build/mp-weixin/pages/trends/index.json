@@ -2,7 +2,5 @@
   "navigationBarTitleText": "瘙痒趋势",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
-  "usingComponents": {
-    "med-calendar": "../../components/MedCalendar"
-  }
+  "usingComponents": {}
 }

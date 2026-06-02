@@ -69,12 +69,34 @@ export const useRecordStore = defineStore('record', () => {
   async function saveRecord(tempFilePaths = []) {
     loading.value = true
     try {
+      // 先上传照片到云存储
+      const photoUrls = []
+      if (tempFilePaths.length > 0) {
+        for (const filePath of tempFilePaths) {
+          try {
+            // #ifdef MP-WEIXIN
+            const uploadRes = await new Promise((resolve, reject) => {
+              wx.cloud.uploadFile({
+                cloudPath: 'photos/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + (filePath.split('.').pop() || 'jpg'),
+                filePath: filePath,
+                success: res => resolve(res),
+                fail: err => reject(err)
+              })
+            })
+            photoUrls.push(uploadRes.fileID)
+            // #endif
+          } catch (e) {
+            console.error('上传照片失败:', e)
+          }
+        }
+      }
+
       const data = {
         areas: [...selectedAreas.value],
         triggers: [...selectedTriggers.value],
         customTrigger: customTrigger.value,
         itchScore: itchScore.value,
-        photoUrls: tempFilePaths || []
+        photoUrls
       }
       const res = await recordsApi.create(data)
       if (res.code === 0) {

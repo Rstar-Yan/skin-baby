@@ -55,28 +55,30 @@
   </view>
 </template>
 
+<script>
+// onLoad 接收参数
+</script>
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { recordsApi } from '@/utils/cloud.js'
+import { onLoad } from '@dcloudio/uni-app'
 
 const record = ref(null)
 const loading = ref(true)
+let recordId = ''
 
-onMounted(() => {
-  const pages = getCurrentPages()
-  const currentPage = pages[pages.length - 1]
-  const recordId = currentPage.$page?.options?.id
-
-  if (recordId) {
-    loadRecord(recordId)
-  } else {
-    loading.value = false
-  }
+onLoad((query) => {
+  recordId = query.id || ''
 })
 
-const loadRecord = async (id) => {
+onMounted(async () => {
+  if (!recordId) {
+    loading.value = false
+    return
+  }
   try {
-    const res = await recordsApi.getById(id)
+    const res = await recordsApi.getById(recordId)
     if (res.code === 0) {
       record.value = res.data
     }
@@ -85,7 +87,7 @@ const loadRecord = async (id) => {
   } finally {
     loading.value = false
   }
-}
+})
 
 const hasTriggers = computed(() => {
   if (!record.value) return false
