@@ -76,9 +76,9 @@ onMounted(() => {
 
 const loadRecord = async (id) => {
   try {
-    const res = await recordsApi.list(1, 50)
+    const res = await recordsApi.getById(id)
     if (res.code === 0) {
-      record.value = res.data.list.find(r => r._id === id) || null
+      record.value = res.data
     }
   } catch (err) {
     console.error('加载记录失败:', err)

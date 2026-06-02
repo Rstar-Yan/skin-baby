@@ -7,26 +7,26 @@
 
     <view
       class="slider-body"
-      @touchstart="onTouchStart"
-      @touchmove="onTouchMove"
-      @touchend="onTouchEnd"
-      @click="onRailClick"
+      @click="onClick"
     >
       <view class="slider-rail"></view>
       <view
         class="slider-thumb"
         :style="{ left: thumbLeft }"
-        @touchstart.stop.prevent="onThumbTouchStart"
-        @touchmove.stop.prevent="onThumbTouchMove"
-        @touchend.stop.prevent="onThumbTouchEnd"
       >
         {{ modelValue }}
       </view>
     </view>
 
     <view class="slider-ticks">
-      <text>0</text><text>1</text><text>2</text><text>3</text><text>4</text>
-      <text>5</text><text>6</text><text>7</text><text>8</text><text>9</text><text>10</text>
+      <view
+        v-for="n in 11"
+        :key="n - 1"
+        class="tick"
+        @click="setScore(n - 1)"
+      >
+        <text class="tick-val" :class="{ active: modelValue === n - 1 }">{{ n - 1 }}</text>
+      </view>
     </view>
 
     <text class="slider-desc" :class="descClass">{{ descText }}</text>
@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -44,8 +44,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
-
-const dragging = ref(false)
 
 const thumbLeft = computed(() => (props.modelValue / 10 * 100) + '%')
 
@@ -64,97 +62,19 @@ const descClass = computed(() => {
   return 'severe'
 })
 
-const getPct = (clientX, railEl) => {
-  return new Promise((resolve) => {
-    const query = uni.createSelectorQuery().in(railEl)
-    query.select('.slider-body').boundingClientRect(rect => {
-      if (!rect) { resolve(0); return }
-      const pct = (clientX - rect.left) / rect.width
-      resolve(Math.max(0, Math.min(1, pct)))
-    }).exec()
-  })
+const setScore = (val) => {
+  emit('update:modelValue', val)
 }
 
-// In uni-app, we handle touch events via @touchstart etc.
-const setScoreByPct = (pct) => {
-  const score = Math.round(pct * 10)
-  emit('update:modelValue', score)
-}
-
-// Using simple click-based interaction for reliability in mini-program
-const onRailClick = (e) => {
-  // In mini-program, the touch position is in e.detail
-  if (e.detail && e.detail.x !== undefined) {
-    // e.detail.x is relative to the component
-  }
-  // Use a more reliable approach with boundingClientRect
-  const query = uni.createSelectorQuery().in(this)
+const onClick = (e) => {
+  const query = uni.createSelectorQuery()
   query.select('.slider-body').boundingClientRect().exec((res) => {
     if (!res || !res[0]) return
     const rect = res[0]
-    const clientX = e.detail.x || e.touches?.[0]?.clientX || 0
-    const pct = (clientX - rect.left) / rect.width
-    setScoreByPct(pct)
+    const pct = (e.detail.x - rect.left) / rect.width
+    const score = Math.round(Math.max(0, Math.min(1, pct)) * 10)
+    emit('update:modelValue', score)
   })
-}
-
-// Refs for direct DOM manipulation in touch handlers
-const updateFromEvent = (e, useTouches = true) => {
-  const query = uni.createSelectorQuery().in(this)
-  query.select('.slider-body').boundingClientRect().exec((res) => {
-    if (!res || !res[0]) return
-    const rect = res[0]
-    const clientX = useTouches && e.touches?.[0] ? e.touches[0].clientX : (e.detail?.x || 0)
-    const pct = (clientX - rect.left) / rect.width
-    setScoreByPct(pct)
-  })
-}
-
-const onTouchStart = (e) => {
-  if (e.touches && e.touches[0]) {
-    const query = uni.createSelectorQuery().in(this)
-    query.select('.slider-body').boundingClientRect().exec((res) => {
-      if (!res || !res[0]) return
-      const rect = res[0]
-      const pct = (e.touches[0].clientX - rect.left) / rect.width
-      setScoreByPct(pct)
-    })
-  }
-}
-
-const onTouchMove = (e) => {
-  if (e.touches && e.touches[0]) {
-    const query = uni.createSelectorQuery().in(this)
-    query.select('.slider-body').boundingClientRect().exec((res) => {
-      if (!res || !res[0]) return
-      const rect = res[0]
-      const pct = (e.touches[0].clientX - rect.left) / rect.width
-      setScoreByPct(pct)
-    })
-  }
-}
-
-const onTouchEnd = () => {}
-
-const onThumbTouchStart = (e) => {
-  dragging.value = true
-}
-
-const onThumbTouchMove = (e) => {
-  if (!dragging.value) return
-  if (e.touches && e.touches[0]) {
-    const query = uni.createSelectorQuery().in(this)
-    query.select('.slider-body').boundingClientRect().exec((res) => {
-      if (!res || !res[0]) return
-      const rect = res[0]
-      const pct = (e.touches[0].clientX - rect.left) / rect.width
-      setScoreByPct(pct)
-    })
-  }
-}
-
-const onThumbTouchEnd = () => {
-  dragging.value = false
 }
 </script>
 
@@ -190,6 +110,7 @@ const onThumbTouchEnd = () => {
 .slider-body {
   position: relative;
   height: 40px;
+  margin-bottom: 4px;
 }
 
 .slider-rail {
@@ -218,19 +139,36 @@ const onThumbTouchEnd = () => {
   font-weight: 700;
   color: #383E48;
   z-index: 2;
+  transition: left 0.15s ease;
 }
 
 .slider-ticks {
   display: flex;
   justify-content: space-between;
   padding: 0 2px;
-  margin-top: 2px;
 
-  text {
-    font-size: 9px;
-    color: #9AA0A6;
-    width: 16px;
-    text-align: center;
+  .tick {
+    width: 18px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.tick-val {
+  font-size: 10px;
+  color: #9AA0A6;
+  width: 18px;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 9999px;
+
+  &.active {
+    color: #4A90D9;
+    font-weight: 700;
+    font-size: 12px;
+    background: #EBF2FA;
   }
 }
 

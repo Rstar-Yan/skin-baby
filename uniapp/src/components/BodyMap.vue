@@ -2,34 +2,35 @@
   <view class="body-map">
     <view class="body-map-title">选择受累部位（可多选）</view>
     <view class="body-svg-wrap">
-      <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" @click="onSvgClick">
+      <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
         <!-- Body outline -->
-        <ellipse cx="100" cy="28" rx="28" ry="22" fill="oklch(0.95 0.01 251)" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="100" y1="50" x2="100" y2="100" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <rect x="72" y="60" width="56" height="80" rx="16" fill="oklch(0.96 0.01 251)" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="72" y1="78" x2="44" y2="108" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="128" y1="78" x2="156" y2="108" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="44" y1="108" x2="36" y2="150" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="156" y1="108" x2="164" y2="150" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="100" y1="140" x2="80" y2="194" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
-        <line x1="100" y1="140" x2="120" y2="194" stroke="oklch(0.85 0.02 251)" stroke-width="1.5"/>
+        <ellipse cx="100" cy="28" rx="28" ry="22" fill="#EBF2FA" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="100" y1="50" x2="100" y2="100" stroke="#D5DAE0" stroke-width="1.5"/>
+        <rect x="72" y="60" width="56" height="80" rx="16" fill="#F5F6F8" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="72" y1="78" x2="44" y2="108" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="128" y1="78" x2="156" y2="108" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="44" y1="108" x2="36" y2="150" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="156" y1="108" x2="164" y2="150" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="100" y1="140" x2="80" y2="194" stroke="#D5DAE0" stroke-width="1.5"/>
+        <line x1="100" y1="140" x2="120" y2="194" stroke="#D5DAE0" stroke-width="1.5"/>
 
-        <!-- Dots with labels -->
-        <g v-for="dot in dots" :key="dot.id">
-          <circle
-            class="body-dot"
-            :class="{ selected: isSelected(dot.id), hint: dot.id === 'top_head' }"
-            :cx="dot.cx"
-            :cy="dot.cy"
-            r="7"
-            :fill="isSelected(dot.id) ? '#D9534F' : 'oklch(0.75 0.02 251)'"
-            :stroke="isSelected(dot.id) ? '#fff' : 'transparent'"
-            :stroke-width="isSelected(dot.id) ? 3 : 0"
-            :data-id="dot.id"
-          />
-        </g>
+        <!-- Clickable dots -->
+        <circle
+          v-for="dot in dots"
+          :key="dot.id"
+          class="body-dot"
+          :class="{ selected: isSelected(dot.id) }"
+          :cx="dot.cx"
+          :cy="dot.cy"
+          r="9"
+          :fill="isSelected(dot.id) ? '#D9534F' : '#B0B8C4'"
+          :stroke="isSelected(dot.id) ? '#fff' : 'transparent'"
+          :stroke-width="isSelected(dot.id) ? 3 : 0"
+          :data-id="dot.id"
+          @click="onDotClick(dot.id)"
+        />
 
-        <!-- Labels for key dots -->
+        <!-- Labels -->
         <text class="body-label" x="45" y="14">头顶</text>
         <text class="body-label" x="38" y="34">面部</text>
         <text class="body-label" x="38" y="60">颈部</text>
@@ -68,11 +69,8 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const dots = ref(bodyAreas)
-
-// 直接用选中的部位名称来管理
 const selectedNames = ref([...props.modelValue])
 
-// 同步外部变化
 watch(() => props.modelValue, (val) => {
   selectedNames.value = [...val]
 }, { deep: true })
@@ -84,23 +82,21 @@ const isSelected = (id) => {
 
 const displayAreas = computed(() => selectedNames.value)
 
-const onSvgClick = (e) => {
-  const circle = e.target.closest('circle')
-  if (!circle) return
-  const id = circle.getAttribute('data-id')
-  if (!id) return
-
-  const dot = dots.value.find(d => d.id === id)
-  if (!dot) return
-
-  const idx = selectedNames.value.indexOf(dot.name)
+const toggleName = (name) => {
+  const idx = selectedNames.value.indexOf(name)
   if (idx >= 0) {
     selectedNames.value.splice(idx, 1)
   } else {
-    selectedNames.value.push(dot.name)
+    selectedNames.value.push(name)
   }
-
   emit('update:modelValue', [...selectedNames.value])
+}
+
+const onDotClick = (id) => {
+  const dot = dots.value.find(d => d.id === id)
+  if (dot) {
+    toggleName(dot.name)
+  }
 }
 
 const removeArea = (areaName) => {
@@ -142,10 +138,6 @@ const removeArea = (areaName) => {
 .body-dot {
   cursor: pointer;
   transition: all 0.25s ease;
-
-  &.selected {
-    r: 10;
-  }
 }
 
 .body-label {

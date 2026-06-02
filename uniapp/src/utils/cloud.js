@@ -62,6 +62,11 @@ export const recordsApi = {
   /** 最近照片 */
   recentPhotos() {
     return callCloudFunction('records', { action: 'recentPhotos' })
+  },
+
+  /** 按ID获取单条 */
+  getById(id) {
+    return callCloudFunction('records', { action: 'getById', id })
   }
 }
 
