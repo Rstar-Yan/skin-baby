@@ -1,15 +1,20 @@
 <template>
   <view class="page-home">
+    <!-- Loading -->
+    <view v-if="!userStore.initialized || loadingStatus" class="loading-mask">
+      <text class="loading-text">加载中...</text>
+    </view>
+
     <!-- Welcome Row -->
-    <view class="welcome-row">
+    <view class="welcome-row" v-if="userStore.initialized">
       <view class="avatar-circle">👶</view>
       <view class="welcome-text">
-        <text class="greeting">{{ userStore.initialized ? (userStore.user?.childName ? '下午好，' + userStore.childDisplayName + '妈妈' : '下午好，宝宝家长') : '加载中...' }}</text>
+        <text class="greeting">{{ recordStore.greeting }}，{{ userStore.user?.childName ? userStore.user.childName + '妈妈' : '宝宝家长' }}</text>
         <text class="name">今天护理做好了吗？</text>
       </view>
     </view>
 
-    <!-- Status Grid: 2x2 -->
+    <!-- Status Grid -->
     <view class="status-grid">
       <StatusCard
         icon="🧴"
@@ -18,8 +23,8 @@
         @click="onMoisturize"
       >
         <template #value>
-          <text>{{ todayStatus.moisturizing.current }}</text>
-          <text style="font-size:14px">/{{ todayStatus.moisturizing.target }}</text>
+          <text>{{ statusMoisturizing.current }}</text>
+          <text style="font-size:14px">/{{ statusMoisturizing.target }}</text>
           <text style="font-size:13px;font-weight:500;color:#7A828E"> 次</text>
         </template>
       </StatusCard>
@@ -27,30 +32,30 @@
       <StatusCard
         icon="🩺"
         label="瘙痒评分"
-        :value="todayStatus.itchScore + ' 分'"
-        status="todo"
+        :value="statusItchText"
+        :status="itchCardStatus"
         @click="switchToRecord"
       />
 
       <StatusCard
         icon="💊"
         label="今日用药"
-        status="done"
+        status="default"
         @click="switchToRecord"
       >
         <template #value>
-          <text style="font-size:15px;color:#52B788">已完成</text>
+          <text style="font-size:15px;color:#9AA0A6">暂未支持</text>
         </template>
       </StatusCard>
 
       <StatusCard
         icon="📸"
         label="今日拍照"
-        status="default"
+        :status="photoCardStatus"
         @click="switchToRecord"
       >
         <template #value>
-          <text style="font-size:15px;color:#9AA0A6">未记录</text>
+          <text style="font-size:15px;color:#9AA0A6">{{ recordStore.todayStatus?.hasPhoto ? '已记录' : '未记录' }}</text>
         </template>
       </StatusCard>
     </view>
@@ -59,20 +64,21 @@
     <view class="env-card">
       <text class="env-icon">🌤️</text>
       <view class="env-info">
-        <text class="env-temp">{{ todayStatus.environment.city }} {{ todayStatus.environment.temp }}°</text>
-        <text class="env-humi">湿度 {{ todayStatus.environment.humidity }}% · 较干燥</text>
+        <text class="env-temp">今日护理</text>
+        <text class="env-humi">{{ statusMoisturizing.done ? '润肤已完成 ✓' : '润肤尚未完成' }}</text>
       </view>
-      <text class="env-tip">⚠️ 加强润肤</text>
+      <text class="env-tip" :class="{ done: statusMoisturizing.done }">
+        {{ statusMoisturizing.done ? '已完成' : '待完成' }}
+      </text>
     </view>
 
     <!-- Trigger Insight -->
-    <view class="trigger-insight" @click="switchToRecord">
+    <view class="trigger-insight" v-if="latestRecord" @click="switchToTrends">
       <view class="ti-icon">🔍</view>
       <view class="ti-info">
-        <text class="ti-title">本月可疑诱因</text>
-        <text class="ti-desc">{{ triggerInsight.description }}</text>
+        <text class="ti-title">最近一次记录</text>
+        <text class="ti-desc">瘙痒 {{ latestRecord.itchScore }} 分 · {{ latestRecord.areas?.join('、') || '未标记部位' }}</text>
       </view>
-      <text class="ti-badge">⚠️ 高关联</text>
     </view>
 
     <!-- Quick Actions -->
@@ -81,51 +87,93 @@
       <button class="quick-btn secondary" @click="onMoisturize">🧴 润肤打卡</button>
     </view>
 
-    <!-- Recent Records -->
-    <view class="section-label">最近记录</view>
-    <scroll-view scroll-x class="photo-history" :show-scrollbar="false">
+    <!-- Recent Photos -->
+    <view class="section-label" v-if="recentPhotos.length > 0">最近记录</view>
+    <scroll-view scroll-x class="photo-history" :show-scrollbar="false" v-if="recentPhotos.length > 0">
       <view
-        v-for="(rec, i) in recentRecords"
+        v-for="(rec, i) in recentPhotos"
         :key="i"
         class="photo-thumb"
         @click="switchToTrends"
       >
-        <text>{{ rec.icon }}</text>
-        <text style="font-size:11px">{{ rec.area }}</text>
-        <text class="date-sm">{{ rec.date }}</text>
+        <text>📸</text>
+        <text style="font-size:11px">{{ rec.areas[0] || '未标记' }}</text>
+        <text class="date-sm">{{ rec.dateStr }}</text>
       </view>
     </scroll-view>
   </view>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user.js'
-import { todayStatus as mockTodayStatus, recentRecords as mockRecentRecords, triggerInsight as mockTriggerInsight } from '@/utils/mock-data.js'
+import { useRecordStore } from '@/stores/record.js'
 import StatusCard from '@/components/StatusCard.vue'
 
 const userStore = useUserStore()
-const userInfo = computed(() => userStore.user ? { name: userStore.childDisplayName } : { name: '小贝壳' })
-const todayStatus = reactive({ ...mockTodayStatus })
-const recentRecords = ref([...mockRecentRecords])
-const triggerInsightData = ref({ ...mockTriggerInsight })
+const recordStore = useRecordStore()
+
+const loadingStatus = ref(true)
+
+onMounted(async () => {
+  // 等待登录完成
+  if (!userStore.initialized) {
+    await userStore.doLogin()
+  }
+  // 加载今日状态和最近照片
+  await Promise.all([
+    recordStore.loadTodayStatus(),
+    recordStore.loadRecentPhotos()
+  ])
+  loadingStatus.value = false
+})
+
+// 润肤状态
+const statusMoisturizing = computed(() => {
+  const s = recordStore.todayStatus?.moisturizing
+  return s || { current: 0, target: 2, done: false }
+})
 
 const moisturizingStatus = computed(() => {
-  if (todayStatus.moisturizing.done) return 'done'
-  if (todayStatus.moisturizing.current >= todayStatus.moisturizing.target) return 'done'
+  if (statusMoisturizing.value.done) return 'done'
+  if (statusMoisturizing.value.current > 0) return 'todo'
   return 'todo'
 })
 
-const onMoisturize = () => {
-  if (todayStatus.moisturizing.current >= todayStatus.moisturizing.target) {
+// 瘙痒状态
+const statusItchText = computed(() => {
+  const score = recordStore.todayStatus?.itchScore
+  if (score !== null && score !== undefined) return score + ' 分'
+  return '未记录'
+})
+
+const itchCardStatus = computed(() => {
+  return recordStore.todayStatus?.itchScore !== null ? 'done' : 'todo'
+})
+
+// 拍照状态
+const photoCardStatus = computed(() => {
+  return recordStore.todayStatus?.hasPhoto ? 'done' : 'default'
+})
+
+// 最近照片
+const recentPhotos = computed(() => recordStore.recentPhotos)
+
+// 最近一条记录
+const latestRecord = computed(() => recordStore.todayStatus?.todayRecord || null)
+
+// 润肤打卡
+const onMoisturize = async () => {
+  if (statusMoisturizing.value.done) {
     uni.showToast({ title: '今日润肤已完成', icon: 'none' })
     return
   }
-  todayStatus.moisturizing.current++
-  if (todayStatus.moisturizing.current >= todayStatus.moisturizing.target) {
-    todayStatus.moisturizing.done = true
+  const res = await recordStore.doMoisturize()
+  if (res.code === 0) {
+    uni.showToast({ title: '润肤打卡成功 🧴', icon: 'success' })
+  } else {
+    uni.showToast({ title: '打卡失败，请重试', icon: 'none' })
   }
-  uni.showToast({ title: '润肤打卡成功', icon: 'success' })
 }
 
 const switchToRecord = () => {
@@ -141,6 +189,18 @@ const switchToTrends = () => {
 .page-home {
   padding: 0 18px;
   padding-top: 6px;
+}
+
+.loading-mask {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #9AA0A6;
 }
 
 .welcome-row {
@@ -226,6 +286,11 @@ const switchToTrends = () => {
   padding: 5px 12px;
   border-radius: 9999px;
   font-weight: 500;
+
+  &.done {
+    color: #52B788;
+    background: #EDF7F1;
+  }
 }
 
 .trigger-insight {
@@ -271,15 +336,6 @@ const switchToTrends = () => {
     margin-top: 3px;
     display: block;
   }
-}
-
-.ti-badge {
-  font-size: 11px;
-  font-weight: 600;
-  color: #D4A843;
-  background: #FBF5E8;
-  padding: 4px 10px;
-  border-radius: 9999px;
 }
 
 .quick-row {

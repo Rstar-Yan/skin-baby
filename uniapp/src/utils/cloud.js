@@ -18,21 +18,69 @@ export function callCloudFunction(name, data = {}) {
     })
     // #endif
     // #ifndef MP-WEIXIN
-    // H5 或模拟器环境 - 返回 mock
     resolve({ code: 0, data: {} })
     // #endif
   })
 }
 
 /**
- * 微信登录
- * @returns {Promise<object>} { openid, isNew }
+ * 静默登录
+ * @returns {Promise<object>} { id, openid, childName, ... }
  */
 export async function login() {
-  // #ifdef MP-WEIXIN
-  const { code } = await wx.login()
-  const result = await callCloudFunction('login', { code })
-  return result.data
-  // #endif
-  return { openid: 'mock_openid', isNew: false }
+  const result = await callCloudFunction('login', {})
+  if (result.code === 0) {
+    return result.data
+  }
+  return null
+}
+
+/**
+ * 症状记录相关
+ */
+export const recordsApi = {
+  /** 创建症状记录 */
+  create(data) {
+    return callCloudFunction('records', { action: 'create', ...data })
+  },
+
+  /** 查询记录列表 */
+  list(page = 1, pageSize = 20) {
+    return callCloudFunction('records', { action: 'list', page, pageSize })
+  },
+
+  /** 获取最新一条 */
+  latest() {
+    return callCloudFunction('records', { action: 'latest' })
+  },
+
+  /** 本周趋势 */
+  weekTrend() {
+    return callCloudFunction('records', { action: 'weekTrend' })
+  },
+
+  /** 最近照片 */
+  recentPhotos() {
+    return callCloudFunction('records', { action: 'recentPhotos' })
+  }
+}
+
+/**
+ * 润肤打卡相关
+ */
+export const moisturizeApi = {
+  /** 打卡 */
+  checkin(productName = '', areas = []) {
+    return callCloudFunction('moisturize', { action: 'checkin', productName, areas })
+  },
+
+  /** 今日状态 */
+  today() {
+    return callCloudFunction('moisturize', { action: 'today' })
+  },
+
+  /** 月度摘要 */
+  summary() {
+    return callCloudFunction('moisturize', { action: 'summary' })
+  }
 }

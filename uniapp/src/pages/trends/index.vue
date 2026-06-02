@@ -5,91 +5,109 @@
       <view
         class="trend-tab"
         :class="{ active: activeTab === 'week' }"
-        @click="activeTab = 'week'"
+        @click="onSwitchTab('week')"
       >
         本周
       </view>
       <view
         class="trend-tab"
-        :class="{ active: activeTab === 'month' }"
-        @click="activeTab = 'month'"
+        :class="{ active: activeTab === 'records' }"
+        @click="onSwitchTab('records')"
       >
-        本月
+        记录列表
       </view>
     </view>
 
+    <!-- Loading -->
+    <view v-if="loadingTrend" class="trend-loading">加载中...</view>
+
     <!-- Week Chart -->
-    <view v-if="activeTab === 'week'" class="chart-card">
+    <view v-if="activeTab === 'week' && trendData" class="chart-card">
       <view class="chart-card-title">瘙痒评分趋势 · 本周</view>
       <canvas
         type="2d"
-        id="weekChart"
+        id="trendChart"
         class="chart-canvas"
-        @touchstart="onWeekChartTouch"
       ></canvas>
       <view class="chart-summary">
         <view class="chart-stat">
-          <text class="stat-val" style="color:#D9534F">{{ weekData.highest }}</text>
+          <text class="stat-val" style="color:#D9534F">{{ trendData.highest }}</text>
           <text class="stat-label">最高评分</text>
         </view>
         <view class="chart-stat">
-          <text class="stat-val">{{ weekData.average }}</text>
+          <text class="stat-val">{{ trendData.average }}</text>
           <text class="stat-label">平均评分</text>
         </view>
         <view class="chart-stat">
-          <text class="stat-val" style="color:#52B788">{{ weekData.lowest }}</text>
+          <text class="stat-val" style="color:#52B788">{{ trendData.lowest }}</text>
           <text class="stat-label">最低评分</text>
         </view>
       </view>
     </view>
 
-    <!-- Month Chart -->
-    <view v-if="activeTab === 'month'" class="chart-card">
-      <view class="chart-card-title">瘙痒评分趋势 · 本月</view>
-      <canvas
-        type="2d"
-        id="monthChart"
-        class="chart-canvas"
-        @touchstart="onMonthChartTouch"
-      ></canvas>
-      <view class="chart-summary">
-        <view class="chart-stat">
-          <text class="stat-val" style="color:#D9534F">{{ monthData.highest }}</text>
-          <text class="stat-label">最高评分</text>
+    <!-- Records List -->
+    <view v-if="activeTab === 'records'">
+      <view v-for="rec in records" :key="rec._id" class="record-item">
+        <view class="record-header">
+          <text class="record-date">{{ formatDate(rec.createdAt) }}</text>
+          <text class="record-score" :class="scoreClass(rec.itchScore)">{{ rec.itchScore }} 分</text>
         </view>
-        <view class="chart-stat">
-          <text class="stat-val">{{ monthData.average }}</text>
-          <text class="stat-label">平均评分</text>
+        <view class="record-body" v-if="rec.areas && rec.areas.length > 0">
+          <text class="record-tag" v-for="a in rec.areas" :key="a">{{ a }}</text>
         </view>
-        <view class="chart-stat">
-          <text class="stat-val" style="color:#52B788">{{ monthData.lowest }}</text>
-          <text class="stat-label">最低评分</text>
+        <view class="record-triggers" v-if="rec.triggers && rec.triggers.length > 0">
+          <text class="trigger-tag-sm" v-for="t in rec.triggers" :key="t">{{ t.split(':')[1] || t }}</text>
         </view>
       </view>
-    </view>
 
-    <!-- Medication Calendar -->
-    <MedCalendar />
+      <view v-if="records.length === 0 && !loadingTrend" class="empty-state">
+        <text>暂无记录，快去拍照记录吧 📸</text>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { itchTrendWeek, itchTrendMonth } from '@/utils/mock-data.js'
-import MedCalendar from '@/components/MedCalendar.vue'
+import { useRecordStore } from '@/stores/record.js'
 
+const recordStore = useRecordStore()
 const activeTab = ref('week')
-const weekData = ref(itchTrendWeek)
-const monthData = ref(itchTrendMonth)
+const trendData = ref(null)
+const records = ref([])
+const loadingTrend = ref(true)
 
-const drawChart = (canvasId, dataPoints) => {
+onMounted(async () => {
+  await Promise.all([
+    recordStore.loadWeekTrend(),
+    recordStore.fetchRecords()
+  ])
+  trendData.value = recordStore.weekTrend
+  records.value = recordStore.records
+  loadingTrend.value = false
+
+  if (trendData.value) {
+    setTimeout(() => drawChart(trendData.value.trend), 300)
+  }
+})
+
+const onSwitchTab = async (tab) => {
+  activeTab.value = tab
+  if (tab === 'week' && trendData.value) {
+    setTimeout(() => drawChart(trendData.value.trend), 200)
+  }
+}
+
+// 画图
+const drawChart = (dataPoints) => {
+  if (!dataPoints || dataPoints.length === 0) return
+
   const query = uni.createSelectorQuery()
-  query.select('#' + canvasId)
+  query.select('#trendChart')
     .fields({ node: true, size: true })
     .exec((res) => {
       if (!res[0] || !res[0].node) {
-        // Retry after a short delay for canvas to be ready
-        setTimeout(() => drawChart(canvasId, dataPoints), 200)
+        setTimeout(() => drawChart(dataPoints), 200)
         return
       }
       const canvas = res[0].node
@@ -102,7 +120,7 @@ const drawChart = (canvasId, dataPoints) => {
       canvas.height = h * dpr
       ctx.scale(dpr, dpr)
 
-      const padLeft = 50
+      const padLeft = 40
       const padRight = 20
       const padTop = 10
       const padBottom = 30
@@ -123,7 +141,7 @@ const drawChart = (canvasId, dataPoints) => {
         ctx.stroke()
       }
 
-      // Y-axis labels
+      // Y labels
       ctx.fillStyle = '#9AA0A6'
       ctx.font = '10px -apple-system'
       ctx.textAlign = 'right'
@@ -133,21 +151,23 @@ const drawChart = (canvasId, dataPoints) => {
         ctx.fillText(String(val), padLeft - 6, y + 4)
       }
 
-      if (!dataPoints || dataPoints.length === 0) return
+      // Filter days that have data
+      const hasData = dataPoints.filter(p => p.count > 0)
+      if (hasData.length === 0) return
 
       const stepX = plotW / Math.max(dataPoints.length - 1, 1)
 
-      // Area fill
+      // Area fill (skip null)
       ctx.beginPath()
-      const firstX = padLeft
-      const firstY = padTop + plotH - (dataPoints[0].score / maxScore) * plotH
+      let firstX = padLeft
       ctx.moveTo(firstX, padTop + plotH)
-      ctx.lineTo(firstX, firstY)
 
       dataPoints.forEach((pt, i) => {
         const x = padLeft + stepX * i
-        const y = padTop + plotH - (pt.score / maxScore) * plotH
-        ctx.lineTo(x, y)
+        if (pt.score !== null) {
+          const y = padTop + plotH - (pt.score / maxScore) * plotH
+          ctx.lineTo(x, y)
+        }
       })
 
       const lastX = padLeft + stepX * (dataPoints.length - 1)
@@ -162,61 +182,58 @@ const drawChart = (canvasId, dataPoints) => {
       ctx.lineWidth = 2.5
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
+
       dataPoints.forEach((pt, i) => {
         const x = padLeft + stepX * i
-        const y = padTop + plotH - (pt.score / maxScore) * plotH
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
+        if (pt.score !== null) {
+          const y = padTop + plotH - (pt.score / maxScore) * plotH
+          if (i === 0 || dataPoints[i - 1].score === null) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
       })
       ctx.stroke()
 
-      // Data dots
+      // Dots + X labels
       dataPoints.forEach((pt, i) => {
         const x = padLeft + stepX * i
-        const y = padTop + plotH - (pt.score / maxScore) * plotH
-        ctx.beginPath()
-        ctx.arc(x, y, 4.5, 0, Math.PI * 2)
-        ctx.fillStyle = '#fff'
-        ctx.fill()
 
-        const isLast = i === dataPoints.length - 1
-        ctx.strokeStyle = isLast ? '#D9534F' : '#4A90D9'
-        ctx.lineWidth = 2.5
-        ctx.stroke()
-
-        // X-axis labels
+        // X label
         ctx.fillStyle = '#9AA0A6'
         ctx.font = '9px -apple-system'
         ctx.textAlign = 'center'
         ctx.fillText(pt.label, x, padTop + plotH + 18)
+
+        if (pt.score !== null) {
+          const y = padTop + plotH - (pt.score / maxScore) * plotH
+          ctx.beginPath()
+          ctx.arc(x, y, 4.5, 0, Math.PI * 2)
+          ctx.fillStyle = '#fff'
+          ctx.fill()
+          ctx.strokeStyle = '#4A90D9'
+          ctx.lineWidth = 2.5
+          ctx.stroke()
+
+          // Score label
+          ctx.fillStyle = '#383E48'
+          ctx.font = 'bold 10px -apple-system'
+          ctx.textAlign = 'center'
+          ctx.fillText(String(pt.score), x, y - 10)
+        }
       })
     })
 }
 
-const drawWeekChart = () => {
-  drawChart('weekChart', weekData.value.days)
+const formatDate = (ts) => {
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-const drawMonthChart = () => {
-  const dataPoints = monthData.value.dates.map(d => ({
-    label: d.label,
-    score: d.score
-  }))
-  drawChart('monthChart', dataPoints)
+const scoreClass = (score) => {
+  if (!score && score !== 0) return ''
+  if (score <= 3) return 'score-low'
+  if (score <= 6) return 'score-mid'
+  return 'score-high'
 }
-
-const onWeekChartTouch = () => {
-  drawWeekChart()
-}
-
-const onMonthChartTouch = () => {
-  drawMonthChart()
-}
-
-onMounted(() => {
-  // Delay drawing to ensure canvas element is rendered
-  setTimeout(() => drawWeekChart(), 300)
-})
 </script>
 
 <style lang="scss" scoped>
@@ -255,6 +272,13 @@ onMounted(() => {
   }
 }
 
+.trend-loading {
+  text-align: center;
+  padding: 40px 0;
+  color: #9AA0A6;
+  font-size: 13px;
+}
+
 .chart-card {
   background: #fff;
   border-radius: 14px;
@@ -272,7 +296,7 @@ onMounted(() => {
 
 .chart-canvas {
   width: 100%;
-  height: 180px;
+  height: 200px;
 }
 
 .chart-summary {
@@ -301,5 +325,74 @@ onMounted(() => {
     margin-top: 2px;
     display: block;
   }
+}
+
+// 记录列表
+.record-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(56,62,72,0.06);
+}
+
+.record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.record-date {
+  font-size: 12px;
+  color: #7A828E;
+  font-weight: 500;
+}
+
+.record-score {
+  font-size: 15px;
+  font-weight: 700;
+
+  &.score-low { color: #52B788; }
+  &.score-mid { color: #D4A843; }
+  &.score-high { color: #D9534F; }
+}
+
+.record-body {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.record-tag {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  background: #EBF2FA;
+  color: #4A90D9;
+  font-weight: 500;
+}
+
+.record-triggers {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.trigger-tag-sm {
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 9px;
+  background: #FBF5E8;
+  color: #D4A843;
+  font-weight: 500;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  font-size: 14px;
+  color: #9AA0A6;
 }
 </style>

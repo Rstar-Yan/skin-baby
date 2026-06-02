@@ -3,8 +3,8 @@
     <!-- Photo Zone -->
     <view class="photo-zone" @click="onTakePhoto">
       <text class="cam-icon">📷</text>
-      <text class="cam-hint">点击拍摄皮损部位</text>
-      <text class="cam-sub">对准宝宝患处，光线充足时拍摄效果最佳</text>
+      <text class="cam-hint">{{ hasPhoto ? '已拍摄 ✓ 点击重拍' : '点击拍摄皮损部位' }}</text>
+      <text class="cam-sub" v-if="!hasPhoto">对准宝宝患处，光线充足时拍摄效果最佳</text>
     </view>
 
     <!-- Body Map -->
@@ -13,49 +13,90 @@
     <!-- Itch Slider -->
     <ItchSlider v-model="itchScore" />
 
-    <!-- Save Button -->
-    <button class="save-btn" @click="onSave">保存记录</button>
-
     <!-- Trigger Tags -->
     <TriggerTags
       v-model="selectedTriggers"
       v-model:customValue="customTrigger"
     />
+
+    <!-- Save Button -->
+    <button class="save-btn" :disabled="saving" @click="onSave">
+      {{ saving ? '保存中...' : '保存记录' }}
+    </button>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRecordStore } from '@/stores/record.js'
 import BodyMap from '@/components/BodyMap.vue'
 import ItchSlider from '@/components/ItchSlider.vue'
 import TriggerTags from '@/components/TriggerTags.vue'
 
-const selectedAreas = ref([])
-const selectedTriggers = ref([])
-const customTrigger = ref('')
-const itchScore = ref(6)
+const store = useRecordStore()
+const saving = ref(false)
+const hasPhoto = ref(false)
 
+// 从 store 获取当前表单值
+const selectedAreas = computed({
+  get: () => store.selectedAreas,
+  set: (v) => store.selectedAreas = v
+})
+
+const selectedTriggers = computed({
+  get: () => store.selectedTriggers,
+  set: (v) => store.selectedTriggers = v
+})
+
+const customTrigger = computed({
+  get: () => store.customTrigger,
+  set: (v) => store.customTrigger = v
+})
+
+const itchScore = computed({
+  get: () => store.itchScore,
+  set: (v) => store.itchScore = v
+})
+
+// 拍照
 const onTakePhoto = () => {
-  uni.showToast({ title: '模拟拍照完成', icon: 'none' })
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['camera', 'album'],
+    success: (res) => {
+      // 先用云存储上传，后面再实现
+      // 当前版本先标记已拍照
+      hasPhoto.value = true
+      uni.showToast({ title: '拍照成功', icon: 'success' })
+    },
+    fail: (err) => {
+      if (err.errMsg !== 'chooseImage:fail cancel') {
+        uni.showToast({ title: '拍照失败', icon: 'none' })
+      }
+    }
+  })
 }
 
-const onSave = () => {
-  const count = selectedTriggers.value.length
-  const msg = count > 0
-    ? `已保存症状 + ${count}个诱因`
-    : '记录已保存（未标记诱因）'
+// 保存
+const onSave = async () => {
+  if (saving.value) return
+  saving.value = true
 
-  uni.showToast({ title: msg, icon: 'none', duration: 1500 })
+  const result = await store.saveRecord()
 
-  setTimeout(() => {
-    // Clear form
-    selectedAreas.value = []
-    selectedTriggers.value = []
-    customTrigger.value = ''
-    itchScore.value = 6
-    // Navigate back to home
-    uni.switchTab({ url: '/pages/home/index' })
-  }, 1500)
+  if (result.success) {
+    uni.showToast({ title: '记录已保存', icon: 'success' })
+    store.clearRecord()
+    hasPhoto.value = false
+
+    setTimeout(() => {
+      uni.switchTab({ url: '/pages/home/index' })
+    }, 1000)
+  } else {
+    uni.showToast({ title: result.error || '保存失败', icon: 'none' })
+    saving.value = false
+  }
 }
 </script>
 
@@ -117,6 +158,10 @@ const onSave = () => {
   &:active {
     background: #3A7BC9;
     transform: scale(0.97);
+  }
+
+  &[disabled] {
+    opacity: 0.6;
   }
 }
 </style>

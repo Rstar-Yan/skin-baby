@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { callCloudFunction, login } from '@/utils/cloud.js'
+import { recordsApi, moisturizeApi } from '@/utils/cloud.js'
 
 export const useRecordStore = defineStore('record', () => {
   // 状态
@@ -10,7 +10,9 @@ export const useRecordStore = defineStore('record', () => {
   const itchScore = ref(6)
   const records = ref([])
   const loading = ref(false)
-  const user = ref(null)
+  const todayStatus = ref(null)
+  const weekTrend = ref(null)
+  const recentPhotos = ref([])
 
   // 计算属性
   const selectedTriggerCount = computed(() => selectedTriggers.value.length)
@@ -22,75 +24,85 @@ export const useRecordStore = defineStore('record', () => {
     return { text: '重度瘙痒，请考虑就医', class: 'severe' }
   })
 
-  // 微信登录
-  const doLogin = async () => {
-    try {
-      const data = await login()
-      user.value = data
-      return data
-    } catch (err) {
-      console.error('登录失败:', err)
-      return null
-    }
+  // 格式化日期
+  function getDateStr(d) {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
+
+  // 获取问候语
+  const greeting = computed(() => {
+    const hour = new Date().getHours()
+    if (hour < 6) return '凌晨好'
+    if (hour < 12) return '上午好'
+    if (hour < 18) return '下午好'
+    return '晚上好'
+  })
 
   // 方法
-  const toggleArea = (areaName) => {
-    const idx = selectedAreas.value.indexOf(areaName)
-    if (idx >= 0) {
-      selectedAreas.value.splice(idx, 1)
-    } else {
-      selectedAreas.value.push(areaName)
-    }
-  }
 
-  const toggleTrigger = (catId, tag) => {
-    const key = `${catId}:${tag}`
-    const idx = selectedTriggers.value.indexOf(key)
-    if (idx >= 0) {
-      selectedTriggers.value.splice(idx, 1)
-    } else {
-      selectedTriggers.value.push(key)
-    }
-  }
-
-  const isTriggerSelected = (catId, tag) => {
-    return selectedTriggers.value.includes(`${catId}:${tag}`)
-  }
-
-  const saveRecord = async () => {
-    const record = {
-      areas: [...selectedAreas.value],
-      triggers: [...selectedTriggers.value],
-      customTrigger: customTrigger.value,
-      itchScore: itchScore.value,
-      itchDescription: itchDescription.value.text
-    }
-
-    // 保存到云数据库
+  /** 加载今日状态 */
+  async function loadTodayStatus() {
     try {
-      const result = await callCloudFunction('records', {
-        action: 'create',
-        data: record
-      })
-      if (result.code === 0) {
-        record._id = result.data.id
-        record.createdAt = new Date().toISOString()
-        records.value.unshift(record)
+      const res = await moisturizeApi.today()
+      if (res.code === 0) {
+        todayStatus.value = res.data
       }
     } catch (err) {
-      console.error('保存记录失败:', err)
+      console.error('加载今日状态失败:', err)
     }
-
-    return record
   }
 
-  const fetchRecords = async () => {
+  /** 润肤打卡 */
+  async function doMoisturize(productName = '') {
+    const res = await moisturizeApi.checkin(productName, selectedAreas.value)
+    if (res.code === 0) {
+      // 刷新今日状态
+      await loadTodayStatus()
+    }
+    return res
+  }
+
+  /** 保存症状记录 */
+  async function saveRecord() {
     loading.value = true
     try {
-      const result = await callCloudFunction('records', { action: 'list' })
-      if (result.code === 0) {
-        records.value = result.data.list || []
+      const data = {
+        areas: [...selectedAreas.value],
+        triggers: [...selectedTriggers.value],
+        customTrigger: customTrigger.value,
+        itchScore: itchScore.value
+      }
+      const res = await recordsApi.create(data)
+      if (res.code === 0) {
+        records.value.unshift(res.data)
+        // 刷新今日状态和照片列表
+        await Promise.all([loadTodayStatus(), loadRecentPhotos()])
+        return { success: true, data: res.data }
+      }
+      return { success: false, error: res.message }
+    } catch (err) {
+      console.error('保存记录失败:', err)
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** 加载记录列表 */
+  async function fetchRecords(page = 1) {
+    loading.value = true
+    try {
+      const res = await recordsApi.list(page)
+      if (res.code === 0) {
+        if (page === 1) {
+          records.value = res.data.list
+        } else {
+          records.value = [...records.value, ...res.data.list]
+        }
+        return res.data
       }
     } catch (err) {
       console.error('获取记录失败:', err)
@@ -99,7 +111,32 @@ export const useRecordStore = defineStore('record', () => {
     }
   }
 
-  const clearRecord = () => {
+  /** 加载本周趋势 */
+  async function loadWeekTrend() {
+    try {
+      const res = await recordsApi.weekTrend()
+      if (res.code === 0) {
+        weekTrend.value = res.data
+      }
+    } catch (err) {
+      console.error('加载趋势失败:', err)
+    }
+  }
+
+  /** 加载最近照片 */
+  async function loadRecentPhotos() {
+    try {
+      const res = await recordsApi.recentPhotos()
+      if (res.code === 0) {
+        recentPhotos.value = res.data
+      }
+    } catch (err) {
+      console.error('加载照片失败:', err)
+    }
+  }
+
+  /** 清空表单 */
+  function clearRecord() {
     selectedAreas.value = []
     selectedTriggers.value = []
     customTrigger.value = ''
@@ -114,19 +151,22 @@ export const useRecordStore = defineStore('record', () => {
     itchScore,
     records,
     loading,
-    user,
+    todayStatus,
+    weekTrend,
+    recentPhotos,
 
     // 计算属性
     selectedTriggerCount,
     itchDescription,
+    greeting,
 
     // 方法
-    toggleArea,
-    toggleTrigger,
-    isTriggerSelected,
+    loadTodayStatus,
+    doMoisturize,
     saveRecord,
     fetchRecords,
-    clearRecord,
-    doLogin
+    loadWeekTrend,
+    loadRecentPhotos,
+    clearRecord
   }
 })
