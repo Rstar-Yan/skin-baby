@@ -2,30 +2,29 @@
   <view class="slider-wrap">
     <view class="slider-header">
       <text class="title">瘙痒评分（NRS）</text>
-      <text class="score">{{ modelValue }}</text>
+      <text class="score" :class="scoreColor">{{ modelValue }}</text>
     </view>
 
-    <view
-      class="slider-body"
-      @click="onClick"
-    >
-      <view class="slider-rail"></view>
-      <view
-        class="slider-thumb"
-        :style="{ left: thumbLeft }"
-      >
-        {{ modelValue }}
-      </view>
-    </view>
-
-    <view class="slider-ticks">
+    <!-- Score buttons: click directly -->
+    <view class="score-grid">
       <view
         v-for="n in 11"
         :key="n - 1"
-        class="tick"
+        class="score-btn"
+        :class="{ active: modelValue === n - 1 }"
         @click="setScore(n - 1)"
       >
-        <text class="tick-val" :class="{ active: modelValue === n - 1 }">{{ n - 1 }}</text>
+        <text class="sbtn-val">{{ n - 1 }}</text>
+      </view>
+    </view>
+
+    <!-- Slider rail (visual only) -->
+    <view class="slider-rail-wrap">
+      <view class="slider-rail">
+        <view class="slider-fill" :style="{ width: fillPercent + '%' }"></view>
+      </view>
+      <view class="slider-thumb" :style="{ left: fillPercent + '%' }">
+        <text class="thumb-label">痒</text>
       </view>
     </view>
 
@@ -45,7 +44,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const thumbLeft = computed(() => (props.modelValue / 10 * 100) + '%')
+const fillPercent = computed(() => (props.modelValue / 10 * 100))
 
 const descText = computed(() => {
   const score = props.modelValue
@@ -62,19 +61,16 @@ const descClass = computed(() => {
   return 'severe'
 })
 
+const scoreColor = computed(() => {
+  const s = props.modelValue
+  if (s <= 2) return 'color-low'
+  if (s <= 5) return 'color-mid'
+  if (s <= 7) return 'color-high'
+  return 'color-severe'
+})
+
 const setScore = (val) => {
   emit('update:modelValue', val)
-}
-
-const onClick = (e) => {
-  const query = uni.createSelectorQuery()
-  query.select('.slider-body').boundingClientRect().exec((res) => {
-    if (!res || !res[0]) return
-    const rect = res[0]
-    const pct = (e.detail.x - rect.left) / rect.width
-    const score = Math.round(Math.max(0, Math.min(1, pct)) * 10)
-    emit('update:modelValue', score)
-  })
 }
 </script>
 
@@ -100,83 +96,108 @@ const onClick = (e) => {
   }
 
   .score {
-    font-size: 38px;
-    font-weight: 700;
-    color: #383E48;
+    font-size: 40px;
+    font-weight: 800;
     line-height: 1;
+    color: #383E48;
+    transition: color 0.3s ease;
+
+    &.color-low { color: #52B788; }
+    &.color-mid { color: #D4A843; }
+    &.color-high { color: #E68A2E; }
+    &.color-severe { color: #D9534F; }
   }
 }
 
-.slider-body {
+.score-grid {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.score-btn {
+  width: 26px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #EDF0F4;
+  background: #FAFBFC;
+  transition: all 0.2s ease;
+
+  &.active {
+    background: #4A90D9;
+    border-color: #4A90D9;
+  }
+
+  &:active {
+    transform: scale(0.85);
+  }
+}
+
+.sbtn-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7A828E;
+
+  .active & {
+    color: #fff;
+  }
+}
+
+.slider-rail-wrap {
   position: relative;
-  height: 40px;
-  margin-bottom: 4px;
+  height: 30px;
+  margin-bottom: 8px;
 }
 
 .slider-rail {
   position: absolute;
-  top: 14px;
+  top: 50%;
   left: 0;
   right: 0;
-  height: 10px;
-  border-radius: 5px;
+  height: 8px;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  background: #EDF0F4;
+  overflow: hidden;
+}
+
+.slider-fill {
+  height: 100%;
   background: linear-gradient(to right, #52B788, #D4A843, #D9534F);
+  border-radius: 4px;
+  transition: width 0.3s ease;
 }
 
 .slider-thumb {
   position: absolute;
-  top: 2px;
-  width: 34px;
-  height: 34px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
   background: #fff;
   border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(56,62,72,0.2);
-  transform: translateX(-50%);
+  box-shadow: 0 2px 6px rgba(56,62,72,0.15);
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: left 0.3s ease;
+  z-index: 2;
+}
+
+.thumb-label {
   font-size: 11px;
   font-weight: 700;
   color: #383E48;
-  z-index: 2;
-  transition: left 0.15s ease;
-}
-
-.slider-ticks {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 2px;
-
-  .tick {
-    width: 18px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-.tick-val {
-  font-size: 10px;
-  color: #9AA0A6;
-  width: 18px;
-  text-align: center;
-  padding: 2px 0;
-  border-radius: 9999px;
-
-  &.active {
-    color: #4A90D9;
-    font-weight: 700;
-    font-size: 12px;
-    background: #EBF2FA;
-  }
 }
 
 .slider-desc {
   text-align: center;
   font-size: 14px;
   font-weight: 500;
-  margin-top: 8px;
+  margin-top: 4px;
   color: #7A828E;
 
   &.none { color: #52B788; }

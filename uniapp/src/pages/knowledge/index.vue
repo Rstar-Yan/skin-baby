@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onShow } from 'vue'
+import { ref, onMounted } from 'vue'
 import { knowledgeApi } from '@/utils/cloud.js'
 
 const loading = ref(true)

@@ -1,44 +1,17 @@
 <template>
   <view class="body-map">
-    <view class="body-map-title">选择受累部位（可多选）</view>
-    <view class="body-svg-wrap">
-      <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
-        <!-- Body outline -->
-        <ellipse cx="100" cy="28" rx="28" ry="22" fill="#EBF2FA" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="100" y1="50" x2="100" y2="100" stroke="#D5DAE0" stroke-width="1.5"/>
-        <rect x="72" y="60" width="56" height="80" rx="16" fill="#F5F6F8" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="72" y1="78" x2="44" y2="108" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="128" y1="78" x2="156" y2="108" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="44" y1="108" x2="36" y2="150" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="156" y1="108" x2="164" y2="150" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="100" y1="140" x2="80" y2="194" stroke="#D5DAE0" stroke-width="1.5"/>
-        <line x1="100" y1="140" x2="120" y2="194" stroke="#D5DAE0" stroke-width="1.5"/>
-
-        <!-- Clickable dots -->
-        <circle
-          v-for="dot in dots"
-          :key="dot.id"
-          class="body-dot"
-          :class="{ selected: isSelected(dot.id) }"
-          :cx="dot.cx"
-          :cy="dot.cy"
-          r="9"
-          :fill="isSelected(dot.id) ? '#D9534F' : '#B0B8C4'"
-          :stroke="isSelected(dot.id) ? '#fff' : 'transparent'"
-          :stroke-width="isSelected(dot.id) ? 3 : 0"
-          :data-id="dot.id"
-          @click="onDotClick(dot.id)"
-        />
-
-        <!-- Labels -->
-        <text class="body-label" x="45" y="14">头顶</text>
-        <text class="body-label" x="38" y="34">面部</text>
-        <text class="body-label" x="38" y="60">颈部</text>
-        <text class="body-label" x="28" y="124">手肘</text>
-        <text class="body-label" x="12" y="158">手腕</text>
-        <text class="body-label" x="28" y="200">膝盖</text>
-        <text class="body-label" x="28" y="244">脚踝</text>
-      </svg>
+    <view class="body-map-title">选择受累部位（可多选，点击部位选中/取消）</view>
+    <view class="areas-grid">
+      <view
+        v-for="dot in dots"
+        :key="dot.id"
+        class="area-btn"
+        :class="{ selected: isSelected(dot.id) }"
+        @click="onDotClick(dot.id)"
+      >
+        <text class="area-icon">{{ dot.emoji }}</text>
+        <text class="area-label">{{ dot.name }}</text>
+      </view>
     </view>
 
     <!-- Selected Areas Tags -->
@@ -49,15 +22,26 @@
         class="area-tag"
         @click="removeArea(area)"
       >
-        {{ area }}
+        {{ area }} ✕
       </view>
     </view>
+    <view v-else class="empty-hint">点击上方部位进行选择</view>
   </view>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { bodyAreas } from '@/utils/mock-data.js'
+
+const dots = ref([
+  { id: 'top_head', name: '头顶', emoji: '🪣' },
+  { id: 'face', name: '面部', emoji: '😊' },
+  { id: 'neck', name: '颈部', emoji: '🧣' },
+  { id: 'torso', name: '躯干', emoji: '👕' },
+  { id: 'elbow', name: '肘窝', emoji: '💪' },
+  { id: 'wrist', name: '手腕', emoji: '✋' },
+  { id: 'knee', name: '膝盖窝', emoji: '🦵' },
+  { id: 'ankle', name: '脚踝', emoji: '🦶' }
+])
 
 const props = defineProps({
   modelValue: {
@@ -67,8 +51,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
-
-const dots = ref(bodyAreas)
 const selectedNames = ref([...props.modelValue])
 
 watch(() => props.modelValue, (val) => {
@@ -82,21 +64,16 @@ const isSelected = (id) => {
 
 const displayAreas = computed(() => selectedNames.value)
 
-const toggleName = (name) => {
-  const idx = selectedNames.value.indexOf(name)
+const onDotClick = (id) => {
+  const dot = dots.value.find(d => d.id === id)
+  if (!dot) return
+  const idx = selectedNames.value.indexOf(dot.name)
   if (idx >= 0) {
     selectedNames.value.splice(idx, 1)
   } else {
-    selectedNames.value.push(name)
+    selectedNames.value.push(dot.name)
   }
   emit('update:modelValue', [...selectedNames.value])
-}
-
-const onDotClick = (id) => {
-  const dot = dots.value.find(d => d.id === id)
-  if (dot) {
-    toggleName(dot.name)
-  }
 }
 
 const removeArea = (areaName) => {
@@ -121,37 +98,53 @@ const removeArea = (areaName) => {
   font-size: 13px;
   font-weight: 600;
   color: #7A828E;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-.body-svg-wrap {
-  width: 100%;
-  height: 400rpx;
-  position: relative;
+.areas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
+}
 
-  svg {
-    width: 100%;
-    height: 100%;
+.area-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 6px;
+  border-radius: 10px;
+  background: #F5F6F8;
+  border: 1.5px solid transparent;
+  transition: all 0.2s ease;
+  min-height: 60px;
+
+  &.selected {
+    background: #FCEEED;
+    border-color: #D9534F;
+  }
+
+  &:active {
+    transform: scale(0.93);
   }
 }
 
-.body-dot {
-  cursor: pointer;
-  transition: all 0.25s ease;
+.area-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
 }
 
-.body-label {
-  font-size: 9px;
-  fill: #7A828E;
-  pointer-events: none;
-  font-weight: 500;
+.area-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #383E48;
 }
 
 .selected-areas {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  margin-top: 12px;
   min-height: 28px;
 }
 
@@ -168,5 +161,12 @@ const removeArea = (areaName) => {
     transform: scale(0.93);
     opacity: 0.7;
   }
+}
+
+.empty-hint {
+  font-size: 11px;
+  color: #B0B8C4;
+  margin-top: 10px;
+  text-align: center;
 }
 </style>
