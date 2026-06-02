@@ -1,12 +1,7 @@
 <template>
   <view class="page-home">
-    <!-- Loading -->
-    <view v-if="!userStore.initialized || loadingStatus" class="loading-mask">
-      <text class="loading-text">加载中...</text>
-    </view>
-
     <!-- Welcome Row -->
-    <view class="welcome-row" v-if="userStore.initialized">
+    <view class="welcome-row">
       <view class="avatar-circle">👶</view>
       <view class="welcome-text">
         <text class="greeting">{{ recordStore.greeting }}，{{ userStore.user?.childName ? userStore.user.childName + '妈妈' : '宝宝家长' }}</text>
@@ -113,19 +108,17 @@ import StatusCard from '@/components/StatusCard.vue'
 const userStore = useUserStore()
 const recordStore = useRecordStore()
 
-const loadingStatus = ref(true)
-
+// 异步加载，不阻塞渲染
 onMounted(async () => {
-  // 等待登录完成
+  // 等待登录完成（首次可能需要冷启动）
   if (!userStore.initialized) {
     await userStore.doLogin()
   }
-  // 加载今日状态和最近照片
-  await Promise.all([
+  // 加载今日状态和最近照片，并行不阻塞渲染
+  Promise.all([
     recordStore.loadTodayStatus(),
     recordStore.loadRecentPhotos()
-  ])
-  loadingStatus.value = false
+  ]).catch(err => console.error('主页数据加载失败:', err))
 })
 
 // 润肤状态
@@ -189,18 +182,6 @@ const switchToTrends = () => {
 .page-home {
   padding: 0 18px;
   padding-top: 6px;
-}
-
-.loading-mask {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 60vh;
-}
-
-.loading-text {
-  font-size: 14px;
-  color: #9AA0A6;
 }
 
 .welcome-row {
