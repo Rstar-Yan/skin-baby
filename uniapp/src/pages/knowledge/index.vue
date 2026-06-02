@@ -1,70 +1,124 @@
 <template>
   <view class="page-knowledge">
-    <view
-      v-for="section in sections"
-      :key="section.category"
-      class="k-section"
-    >
-      <view class="k-section-title">
-        <view class="k-dot" :style="{ background: section.dotColor }"></view>
-        <text>{{ section.categoryName }}</text>
-      </view>
-
-      <view
-        v-for="article in section.items"
-        :key="article.id"
-        class="k-card"
-        @click="onArticleTap(article.title)"
-      >
-        <view
-          class="k-card-icon"
-          :class="'icon-' + article.category"
-        >
-          <text>{{ article.icon }}</text>
-        </view>
-        <view class="k-card-info">
-          <text class="k-title">{{ article.title }}</text>
-          <text class="k-desc">{{ article.desc }}</text>
-        </view>
-        <text class="k-card-arrow">›</text>
-      </view>
+    <view v-if="loading" class="loading-mask">
+      <text class="loading-text">加载中...</text>
     </view>
+
+    <template v-for="section in sections" :key="section.category">
+      <view class="k-section">
+        <view class="k-section-title">
+          <view class="k-dot" :style="{ background: section.dotColor }"></view>
+          <text>{{ section.categoryName }}（{{ section.items.length }}）</text>
+        </view>
+
+        <view
+          v-for="article in section.items"
+          :key="article._id"
+          class="k-card"
+          @click="onArticleTap(article._id)"
+        >
+          <view class="k-card-icon" :class="'icon-' + article.category">
+            <text>{{ article.icon }}</text>
+          </view>
+          <view class="k-card-info">
+            <text class="k-title">{{ article.title }}</text>
+            <text class="k-desc">{{ article.desc }}</text>
+          </view>
+          <text class="k-card-arrow">›</text>
+        </view>
+      </view>
+    </template>
+
+    <view v-if="!loading && sections.length === 0" class="empty-mask">
+      <text>暂无养护知识文章</text>
+    </view>
+
     <view style="height:24px"></view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { knowledgeArticles } from '@/utils/mock-data.js'
+import { ref, onMounted, onShow } from 'vue'
+import { knowledgeApi } from '@/utils/cloud.js'
 
+const loading = ref(true)
 const sections = ref([])
 
-const buildSections = () => {
-  const cats = ['beginner', 'daily', 'trigger', 'acute']
+const buildSections = (articles) => {
+  const catOrder = ['beginner', 'daily', 'trigger', 'acute']
+  const catNames = {
+    beginner: '新手入门',
+    daily: '日常护理',
+    trigger: '诱因识别',
+    acute: '发作应对'
+  }
+  const catColors = {
+    beginner: '#4A90D9',
+    daily: '#52B788',
+    trigger: '#E6A718',
+    acute: '#D9534F'
+  }
+
   const result = []
-  cats.forEach(cat => {
-    const items = knowledgeArticles.filter(a => a.category === cat)
+  catOrder.forEach(cat => {
+    const items = articles.filter(a => a.category === cat)
     if (items.length > 0) {
       result.push({
         category: cat,
-        categoryName: items[0].categoryName,
-        dotColor: items[0].dotColor,
+        categoryName: catNames[cat],
+        dotColor: catColors[cat],
         items
       })
     }
   })
   sections.value = result
 }
-buildSections()
 
-const onArticleTap = (title) => {
-  uni.showToast({ title: '打开：' + title, icon: 'none' })
+const loadArticles = async () => {
+  loading.value = true
+  try {
+    const res = await knowledgeApi.list()
+    if (res.code === 0) {
+      buildSections(res.data)
+    }
+  } catch (err) {
+    console.error('加载知识列表失败:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadArticles)
+
+const onArticleTap = (id) => {
+  uni.navigateTo({ url: '/pages/article-detail/index?id=' + id })
 }
 </script>
 
 <style lang="scss" scoped>
 .page-knowledge {
   padding: 0 18px;
+}
+
+.loading-mask {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #9AA0A6;
+}
+
+.empty-mask {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40vh;
+  font-size: 14px;
+  color: #9AA0A6;
 }
 
 .k-section {

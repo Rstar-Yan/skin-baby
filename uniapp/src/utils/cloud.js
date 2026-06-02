@@ -71,6 +71,27 @@ export const recordsApi = {
 }
 
 /**
+ * 知识库相关
+ */
+export const knowledgeApi = {
+  /** 获取文章列表 */
+  list() {
+    return callCloudFunction('knowledge', { action: 'list' })
+  },
+
+  /** 获取文章详情 */
+  getById(id) {
+    return callCloudFunction('knowledge', { action: 'getById', id })
+  },
+
+  /** 更新文章（管理员用） */
+  update(id, fields) {
+    return callCloudFunction('knowledge', { action: 'update', id, ...fields })
+  }
+}
+
+
+/**
  * 润肤打卡相关
  */
 export const moisturizeApi = {
